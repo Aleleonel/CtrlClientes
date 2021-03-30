@@ -2,10 +2,13 @@ from PyQt5.QtCore import*
 from PyQt5.QtWidgets import*
 from PyQt5.QtGui import *
 from PyQt5.QtPrintSupport import *
+
 import time
 import os
 import sys
+
 import mysql.connector
+import conexao
 
 
 class InsertDialog(QDialog):
@@ -207,6 +210,21 @@ class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setWindowIcon(QIcon('Icones/dollars.png'))
+
+        # cria banco de dados se ele não existir
+        self.cursor = conexao.banco.cursor()
+        self.comando_sql = "CREATE TABLE IF NOT EXISTS clientes(\
+                            codigo INT PRIMARY KEY AUTO_INCREMENT,\
+                            tipo VARCHAR(15),\
+                            nome VARCHAR(60),\
+                            cpf VARCHAR(20),\
+                            rg VARCHAR(20),\
+                            telefone VARCHAR(15),\
+                            endereco VARCHAR(100))"
+        self.cursor.execute(self.comando_sql)
+        self.cursor.close()
+
+
         # cria um menu
         file_menu = self.menuBar().addMenu("&Arquivo")
         help_menu = self.menuBar().addMenu("&Ajuda")
@@ -293,6 +311,12 @@ class MainWindow(QMainWindow):
     def about(self):
         dlg = AboutDialog()
         dlg.exec()
+
+    def loaddata(self):
+        self.cursor = conexao.banco.cursor()
+        self.comando_sql = "SELEC * FROM clientes"
+        self.cursor.execute(self.comando_sql)
+        self.cursor.close()
 
     def insert(self):
         dlg = InsertDialog()
