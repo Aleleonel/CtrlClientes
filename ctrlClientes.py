@@ -1,5 +1,5 @@
-from PyQt5.QtCore import*
-from PyQt5.QtWidgets import*
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtPrintSupport import *
 
@@ -8,6 +8,8 @@ import os
 import sys
 
 import mysql.connector
+from mysql.connector import OperationalError
+
 import conexao
 
 
@@ -15,6 +17,7 @@ class InsertDialog(QDialog):
     """
         Define uma nova janela onde cadastramos os clientes
     """
+
     def __init__(self, *args, **kwargs):
         super(InsertDialog, self).__init__(*args, **kwargs)
 
@@ -40,23 +43,18 @@ class InsertDialog(QDialog):
         self.branchinput.addItem("Empresa")
         layout.addWidget(self.branchinput)
 
-        # Orinalmente as branchs
-        # self.branchinput = QComboBox()
-        # self.branchinput.addItem("Eng. Quimica")
-        # self.branchinput.addItem("Civil")
-        # self.branchinput.addItem("Eletronica")
-        # layout.addWidget(self.branchinput)
-
-        # Orinalmente as branchs do semestre
-        # self.seminput = QComboBox()
-        # self.seminput.addItem("1")
-        # self.seminput.addItem("2")
-        # self.seminput.addItem("3")
-        # layout.addWidget(self.seminput)
 
         self.nameinput = QLineEdit()
         self.nameinput.setPlaceholderText("Nome / Razão")
         layout.addWidget(self.nameinput)
+
+        self.cpfinput = QLineEdit()
+        self.cpfinput.setPlaceholderText("Cpf")
+        layout.addWidget(self.cpfinput)
+
+        self.rginput = QLineEdit()
+        self.rginput.setPlaceholderText("R.G")
+        layout.addWidget(self.rginput)
 
         self.mobileinput = QLineEdit()
         self.mobileinput.setPlaceholderText("Telefone NO.")
@@ -75,28 +73,49 @@ class InsertDialog(QDialog):
         no lineedit e armazena nas variaveis
         :return:
         """
-        name = ""
-        branch = ""
-        # sem = -1
-        mobile = ""
-        address = ""
+        nome = ""
+        tipo = ""
+        cpf = ""
+        rg = ""
+        tel = ""
+        endereco = ""
 
-        name = self.nameinput.text()
-        branch = self.branchinput.itemText(self.branchinput.currentIndex())
+        nome = self.nameinput.text()
+        tipo = self.branchinput.itemText(self.branchinput.currentIndex())
+        cpf = self.cpfinput.text()
+        rg = self.rginput.text()
         # sem = -self.seminput.itemText(self.seminput.currentIndex())
-        mobile = self.mobileinput.text()
-        address = self.addressinput.text()
+        tel = self.mobileinput.text()
+        endereco = self.addressinput.text()
 
-       
+        try:
+            self.cursor = conexao.banco.cursor()
+            comando_sql = "INSERT INTO clientes (tipo, nome, cpf, rg, telefone, endereco)" \
+                          "VALUES (%s,%s,%s,%s,%s,%s)"
+            dados = tipo, nome, cpf, rg, tel, endereco
+            self.cursor.execute(comando_sql, dados)
+
+            conexao.banco.commit()
+            self.cursor.close()
+
+            QMessageBox.information(QMessageBox(), 'Cadastro', 'Dados inseridos com sucesso!')
+            self.close()
+
+        except Exception:
+
+            QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A inserção falhou!')
+
 
 class SearchDialog(QDialog):
     """
         Define uma nova janela onde executaremos 
         a busca no banco
     """
+
     def __init__(self, *args, **kwargs):
         super(SearchDialog, self).__init__(*args, **kwargs)
 
+        self.cursor = conexao.banco.cursor()
         self.QBtn = QPushButton()
         self.QBtn.setText("Procurar")
 
@@ -126,28 +145,29 @@ class SearchDialog(QDialog):
         searchroll = self.searchinput.text()
 
         try:
-            self.cursor = conexao.banco.cursor()
-            comando_sql = "SELECT * FROM clientes WHERE codigo = "+str(searchroll)
-            self.cursor.execute(comando_sql)
+            consulta_sql = "SELECT * FROM clientes WHERE codigo = " + str(searchroll)
+            self.cursor.execute(consulta_sql)
             result = self.cursor.fetchall()
 
             for row in range(len(result)):
-                searchresult = "Codigo : "+str(result[0][0])\
-                                            +'\n'+"Tipo : "+str(result[0][1])\
-                                            +'\n'+"Nome : "+str(result[0][2])\
-                                            +'\n'+"CPF : "+str(result[0][3])\
-                                            +'\n'+"R.G : "+str(result[0][4])\
-                                            +'\n'+"Tel : "+str(result[0][5])\
-                                            +'\n'+"Ender. : "+str(result[0][6])
+                searchresult = "Codigo : " + str(result[0][0]) \
+                               + '\n' + "Tipo : " + str(result[0][1]) \
+                               + '\n' + "Nome : " + str(result[0][2]) \
+                               + '\n' + "CPF : " + str(result[0][3]) \
+                               + '\n' + "R.G : " + str(result[0][4]) \
+                               + '\n' + "Tel : " + str(result[0][5]) \
+                               + '\n' + "Ender. : " + str(result[0][6])
 
-            QMessageBox.information(QMessageBox(), 'Pesquisa realizada com sucesso!', searchresult )
-            self.cursor.commit()
-            self.cursor.close()
-        except:
-            # QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A pesquisa falhou!')
-            pass
+            QMessageBox.information(QMessageBox(), 'Pesquisa realizada com sucesso!', searchresult)
 
+        except Exception:
+            QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A pesquisa falhou!')
 
+        # finally:
+        #     if conexao.banco.is_connected():
+        #         conexao.banco.close()
+        #         self.cursor.close()
+        #         print("Conexão ao MySQL encerrada")
 
 
 class DeleteDialog(QDialog):
@@ -155,6 +175,7 @@ class DeleteDialog(QDialog):
         Define uma nova janela onde executaremos 
         a busca no banco
     """
+
     def __init__(self, *args, **kwargs):
         super(DeleteDialog, self).__init__(*args, **kwargs)
 
@@ -183,13 +204,29 @@ class DeleteDialog(QDialog):
 
     def deletecliente(self):
         delroll = ""
-        delroll = self.deletecliente.text()
+        delroll = self.deleteinput.text()
+
+        try:
+            self.cursor = conexao.banco.cursor()
+            consulta_sql = "DELETE FROM clientes WHERE codigo = " + str(delroll)
+            self.cursor.execute(consulta_sql)
+
+            conexao.banco.commit()
+            self.cursor.close()
+
+            QMessageBox.information(QMessageBox(), 'Deleção realizada com sucesso!', 'DELETADO COM SUCESSO!')
+            self.close()
+
+        except Exception:
+            QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A Deleção falhou!')
+
 
 class AboutDialog(QDialog):
     """
         Define uma nova janela onde mostra as informações
         do botão sobre
     """
+
     def __init__(self, *args, **kwargs):
         super(AboutDialog, self).__init__(*args, **kwargs)
 
@@ -248,7 +285,6 @@ class MainWindow(QMainWindow):
         self.cursor.execute(self.comando_sql)
         self.cursor.close()
 
-
         # cria um menu
         file_menu = self.menuBar().addMenu("&Arquivo")
         help_menu = self.menuBar().addMenu("&Ajuda")
@@ -288,6 +324,7 @@ class MainWindow(QMainWindow):
         toolbar.addAction(btn_ac_adduser)
 
         btn_ac_refresch = QAction(QIcon("Icones/atualizar.png"), "Atualizar dados do Cliente", self)
+        btn_ac_refresch.triggered.connect(self.loaddata)
         btn_ac_refresch.setStatusTip("Atualizar")
         toolbar.addAction(btn_ac_refresch)
 
@@ -313,20 +350,19 @@ class MainWindow(QMainWindow):
         # Arquivo >> Adicionar
         adduser_action = QAction(QIcon("Icones/add.png"), "Add Cliente", self)
         adduser_action.triggered.connect(self.insert)
-        file_menu.addAction(adduser_action)        
+        file_menu.addAction(adduser_action)
 
         # Arquivo >> Busca
         search_action = QAction(QIcon("Icones/pesquisa.png"), "Pesquisar dados por Cliente", self)
         search_action.triggered.connect(self.search)
-        file_menu.addAction(btn_ac_search)       
+        file_menu.addAction(btn_ac_search)
 
         # Deleta Clientes
         delete_action = QAction(QIcon("Icones/deletar.png"), "Deletar o Cliente", self)
         delete_action.triggered.connect(self.delete)
         file_menu.addAction(delete_action)
 
-
-        #   
+        #
         about_action = QAction(QIcon("Icones/sobre-nos.png"), "Desenvolvedores", self)
         about_action.triggered.connect(self.about)
         help_menu.addAction(about_action)
@@ -336,6 +372,7 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def loaddata(self):
+
         self.cursor = conexao.banco.cursor()
         comando_sql = "SELECT * FROM clientes"
         self.cursor.execute(comando_sql)
@@ -344,26 +381,21 @@ class MainWindow(QMainWindow):
         self.tableWidget.setRowCount(len(result))
         self.tableWidget.setColumnCount(7)
 
-        for i in range(len(result)):
-            for j in range(7):
+        for i in range(0, len(result)):
+            for j in range(0, 7):
                 self.tableWidget.setItem(i, j, QTableWidgetItem(str(result[i][j])))
-        self.cursor.close()
-
-        
-       
 
     def insert(self):
         dlg = InsertDialog()
         dlg.exec_()
-    
+
     def delete(self):
         dlg = DeleteDialog()
         dlg.exec_()
-    
+
     def search(self):
         dlg = SearchDialog()
         dlg.exec_()
-
 
 
 app = QApplication(sys.argv)
