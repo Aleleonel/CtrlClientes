@@ -125,6 +125,30 @@ class SearchDialog(QDialog):
         searchroll = ""
         searchroll = self.searchinput.text()
 
+        try:
+            self.cursor = conexao.banco.cursor()
+            comando_sql = "SELECT * FROM clientes WHERE codigo = "+str(searchroll)
+            self.cursor.execute(comando_sql)
+            result = self.cursor.fetchall()
+
+            for row in range(len(result)):
+                searchresult = "Codigo : "+str(result[0][0])\
+                                            +'\n'+"Tipo : "+str(result[0][1])\
+                                            +'\n'+"Nome : "+str(result[0][2])\
+                                            +'\n'+"CPF : "+str(result[0][3])\
+                                            +'\n'+"R.G : "+str(result[0][4])\
+                                            +'\n'+"Tel : "+str(result[0][5])\
+                                            +'\n'+"Ender. : "+str(result[0][6])
+
+            QMessageBox.information(QMessageBox(), 'Pesquisa realizada com sucesso!', searchresult )
+            self.cursor.commit()
+            self.cursor.close()
+        except:
+            # QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A pesquisa falhou!')
+            pass
+
+
+
 
 class DeleteDialog(QDialog):
     """
@@ -248,7 +272,7 @@ class MainWindow(QMainWindow):
         self.tableWidget.verticalHeader().setVisible(False)
         self.tableWidget.verticalHeader().setCascadingSectionResizes(False)
         self.tableWidget.verticalHeader().setStretchLastSection(False)
-        self.tableWidget.setHorizontalHeaderLabels(("Codigo", "Nome", "CPF", "Telefone", "Contato", "Endereço"))
+        self.tableWidget.setHorizontalHeaderLabels(("Codigo", "Tipo", "Nome", "CPF", "RG", "Tel", "Endereco",))
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
@@ -302,8 +326,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(delete_action)
 
 
-        #        
-
+        #   
         about_action = QAction(QIcon("Icones/sobre-nos.png"), "Desenvolvedores", self)
         about_action.triggered.connect(self.about)
         help_menu.addAction(about_action)
@@ -314,9 +337,20 @@ class MainWindow(QMainWindow):
 
     def loaddata(self):
         self.cursor = conexao.banco.cursor()
-        self.comando_sql = "SELEC * FROM clientes"
-        self.cursor.execute(self.comando_sql)
+        comando_sql = "SELECT * FROM clientes"
+        self.cursor.execute(comando_sql)
+        result = self.cursor.fetchall()
+
+        self.tableWidget.setRowCount(len(result))
+        self.tableWidget.setColumnCount(7)
+
+        for i in range(len(result)):
+            for j in range(7):
+                self.tableWidget.setItem(i, j, QTableWidgetItem(str(result[i][j])))
         self.cursor.close()
+
+        
+       
 
     def insert(self):
         dlg = InsertDialog()
@@ -336,4 +370,6 @@ app = QApplication(sys.argv)
 if QDialog.Accepted:
     window = MainWindow()
     window.show()
+    window.loaddata()
+
 sys.exit((app.exec_()))
