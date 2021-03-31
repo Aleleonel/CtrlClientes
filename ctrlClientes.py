@@ -43,7 +43,6 @@ class InsertDialog(QDialog):
         self.branchinput.addItem("Empresa")
         layout.addWidget(self.branchinput)
 
-
         self.nameinput = QLineEdit()
         self.nameinput.setPlaceholderText("Nome / Razão")
         layout.addWidget(self.nameinput)
