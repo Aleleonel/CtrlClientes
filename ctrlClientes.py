@@ -148,6 +148,8 @@ class SearchDialog(QDialog):
             self.cursor.execute(consulta_sql)
             result = self.cursor.fetchall()
 
+
+
             for row in range(len(result)):
                 searchresult = "Codigo : " + str(result[0][0]) \
                                + '\n' + "Tipo : " + str(result[0][1]) \

@@ -151,6 +151,7 @@ class SearchDialog(QDialog):
         except Exception:
             QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A pesquisa falhou!')
 
+
 class DeleteDialog(QDialog):
     """
         Define uma nova janela onde executaremos
@@ -205,11 +206,11 @@ class DeleteDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
-        self.setWindowIcon(QIcon('Icones/dollars.png'))
+        self.setWindowIcon(QIcon('Icones/produtos2.png'))
 
         # cria banco de dados se ele não existir
         self.cursor = conexao.banco.cursor()
-        self.comando_sql = "CREATE TABLE IF NOT EXISTS clientes(\
+        self.comando_sql = "CREATE TABLE IF NOT EXISTS produtos(\
                             codigo INT PRIMARY KEY AUTO_INCREMENT,\
                             descricao VARCHAR(60),\
                             ncm VARCHAR(20),\
