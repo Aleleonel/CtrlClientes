@@ -59,6 +59,137 @@ class AboutDialog(QDialog):
         self.setLayout(layout)
 
 
+class CadastroEstoque(QDialog):
+    """
+        Define uma nova janela onde cadastramos os clientes
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(CadastroEstoque, self).__init__(*args, **kwargs)
+
+        self.QBtn = QPushButton()
+        self.QBtn.setText("Registrar")
+
+        # Configurações do titulo da Janela
+        self.setWindowTitle("Add Estoque :")
+        self.setFixedWidth(300)
+        self.setFixedHeight(300)
+
+        self.setWindowTitle("Descição do Produto :")
+        self.setFixedWidth(300)
+        self.setFixedHeight(300)
+
+        self.cursor = conexao.banco.cursor()
+        consulta_sql = "SELECT * FROM produtos"
+        self.cursor.execute(consulta_sql)
+        result = self.cursor.fetchall()
+
+        # conexao.banco.commit()
+        # self.cursor.close()
+
+        self.QBtn.clicked.connect(self.addproduto)
+
+        layout = QVBoxLayout()
+
+        # Insere o ramo ou tipo /
+        self.codigoinput = QComboBox()
+        busca = []
+        for row in range(len(result)):
+            busca.append(str(result[row][0]))
+        for i in range(len(busca)):
+            self.codigoinput.addItem(str(busca[i]))
+
+        layout.addWidget(self.codigoinput)
+
+        self.statusinput = QLineEdit()
+        self.statusinput.setPlaceholderText("E")
+        layout.addWidget(self.statusinput)
+
+        # Insere o ramo ou tipo /
+
+        self.descricaoinput = QLineEdit()
+        self.descricaoinput.setPlaceholderText("Descrição")
+        layout.addWidget(self.descricaoinput)
+
+        self.qtdinput = QLineEdit()
+        self.qtdinput.setPlaceholderText("Quantidade")
+        layout.addWidget(self.qtdinput)
+
+        layout.addWidget(self.QBtn)
+        self.setLayout(layout)
+
+    def addproduto(self):
+        """
+        captura as informações digitadas
+        no lineedit e armazena nas variaveis
+        :return:
+        """
+        self.cursor = conexao.banco.cursor()
+        consulta_sql = ("SELECT * FROM produtos WHERE codigo =" + str(self.codigoinput.itemText(
+            self.codigoinput.currentIndex())))
+        self.cursor.execute(consulta_sql)
+        valor_codigo = self.cursor.fetchall()
+
+        for i in range(len(valor_codigo)):
+            dados_lidos = valor_codigo[i][1]
+
+        print(dados_lidos)
+
+        codigo = ""
+        descricao = ""
+        quantidade = ""
+        status = "E"
+
+        codigo = self.codigoinput.itemText(self.codigoinput.currentIndex())
+        descricao = self.descricaoinput.setText(dados_lidos)
+        quantidade = self.qtdinput.text()
+
+        try:
+            self.cursor = conexao.banco.cursor()
+            comando_sql = "INSERT INTO estoque (idproduto, estoque, status)" \
+                          "VALUES (%s, %s, %s)"
+            dados = codigo, quantidade, status
+            self.cursor.execute(comando_sql, dados)
+
+            conexao.banco.commit()
+            self.cursor.close()
+
+            QMessageBox.information(QMessageBox(), 'Cadastro', 'Dados inseridos com sucesso!')
+            self.close()
+
+        except Exception:
+
+            QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A inserção falhou!')
+
+    def cadEstoque(self):
+        dlg = ComboEstoque()
+        dlg.exec()
+        self.getComboValue()
+
+
+class ComboEstoque(QComboBox):
+    def __init__(self):
+        super(ComboEstoque, self).__init__()
+
+        self.cursor = conexao.banco.cursor()
+        consulta_sql = "SELECT * FROM produtos"
+        self.cursor.execute(consulta_sql)
+        result = self.cursor.fetchall()
+
+        busca = []
+        for row in range(len(result)):
+            busca.append(str(result[row][0]))
+
+        # print(busca)
+        # self.setStyleSheet('font-size: 25px')
+        self.addItems(busca)
+        self.currentIndexChanged.connect(self.getComboValue)
+
+    def getComboValue(self):
+        print(self.currentText())
+        return self.currentText()
+
+
 class ListEstoque(QMainWindow):
     def __init__(self):
         super(ListEstoque, self).__init__()
@@ -84,7 +215,8 @@ class ListEstoque(QMainWindow):
         self.tableWidget.verticalHeader().setVisible(False)
         self.tableWidget.verticalHeader().setCascadingSectionResizes(False)
         self.tableWidget.verticalHeader().setStretchLastSection(False)
-        self.tableWidget.setHorizontalHeaderLabels(("Codigo", "Descrição", "Preço de Compra", "Quantidade", "Atualização",))
+        self.tableWidget.setHorizontalHeaderLabels(
+            ("Codigo", "Descrição", "Preço de Compra", "Quantidade", "Atualização",))
 
         self.cursor = conexao.banco.cursor()
         comando_sql = "SELECT a.codigo, a.descricao, b.preco, e.estoque, e.ultupdate FROM controle_clientes.produtos" \
@@ -109,8 +241,8 @@ class ListEstoque(QMainWindow):
         self.setStatusBar(statusbar)
 
         # botões do menu
-        btn_ac_adduser = QAction(QIcon("Icones/add.png"), "Cadastro de Cliente", self)
-        # btn_ac_adduser.triggered.connect(self.cadEstoque)
+        btn_ac_adduser = QAction(QIcon("Icones/add.png"), "Cadastro Estoque morto", self)
+        btn_ac_adduser.triggered.connect(self.cadEstoque)
         btn_ac_adduser.setStatusTip("Clientes")
         toolbar.addAction(btn_ac_adduser)
 
@@ -148,9 +280,9 @@ class ListEstoque(QMainWindow):
             for j in range(0, 5):
                 self.tableWidget.setItem(i, j, QTableWidgetItem(str(result[i][j])))
 
-    # def cadEstoque(self):
-    #     dlg = CadastroEstoque()
-    #     dlg.exec()
+    def cadEstoque(self):
+        dlg = CadastroEstoque()
+        dlg.exec()
 
     # def search(self):
     #     dlg = SearchEstoque()
@@ -246,6 +378,7 @@ class CadastroClientes(QDialog):
             self.cursor.close()
 
             QMessageBox.information(QMessageBox(), 'Cadastro', 'Dados inseridos com sucesso!')
+
             self.close()
 
         except Exception:
@@ -513,6 +646,7 @@ class ListProdutos(QMainWindow):
     def cadProdutos(self):
         dlg = CadastroProdutos()
         dlg.exec()
+        self.loaddata()
 
     def search(self):
         dlg = SearchProdutos()
@@ -521,6 +655,7 @@ class ListProdutos(QMainWindow):
     def delete(self):
         dlg = DeleteProduto()
         dlg.exec_()
+        self.loaddata()
 
 
 class SearchProdutos(QDialog):
@@ -727,6 +862,7 @@ class ListClientes(QMainWindow):
     def cadClientes(self):
         dlg = CadastroClientes()
         dlg.exec()
+        self.loaddata()
 
     def search(self):
         dlg = SearchClientes()
@@ -735,6 +871,7 @@ class ListClientes(QMainWindow):
     def delete(self):
         dlg = DeleteCliente()
         dlg.exec_()
+        self.loaddata()
 
 
 class SearchClientes(QDialog):
