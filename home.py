@@ -111,6 +111,10 @@ class CadastroEstoque(QDialog):
         self.descricaoinput.setPlaceholderText("Descrição")
         layout.addWidget(self.descricaoinput)
 
+        self.precoinput = QLineEdit()
+        self.precoinput.setPlaceholderText("Preço de Compra")
+        layout.addWidget(self.precoinput)
+
         self.qtdinput = QLineEdit()
         self.qtdinput.setPlaceholderText("Quantidade")
         layout.addWidget(self.qtdinput)
@@ -133,15 +137,19 @@ class CadastroEstoque(QDialog):
         for i in range(len(valor_codigo)):
             dados_lidos = valor_codigo[i][1]
 
+
+
         print(dados_lidos)
 
         codigo = ""
-        descricao = ""
         quantidade = ""
+        preco = ""
         status = "E"
 
         codigo = self.codigoinput.itemText(self.codigoinput.currentIndex())
-        descricao = self.descricaoinput.setText(dados_lidos)
+        self.descricaoinput.setText(dados_lidos)
+
+        preco = self.precoinput.text()
         quantidade = self.qtdinput.text()
 
         try:
@@ -151,6 +159,9 @@ class CadastroEstoque(QDialog):
             dados = codigo, quantidade, status
             self.cursor.execute(comando_sql, dados)
 
+            consulta_sql_preco = "INSERT INTO precos (idprecos, preco) VALUES (%s, %s)"
+            dados_preco = codigo, preco
+            self.cursor.execute(consulta_sql_preco, dados_preco)
             conexao.banco.commit()
             self.cursor.close()
 
@@ -160,34 +171,6 @@ class CadastroEstoque(QDialog):
         except Exception:
 
             QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A inserção falhou!')
-
-    def cadEstoque(self):
-        dlg = ComboEstoque()
-        dlg.exec()
-        self.getComboValue()
-
-
-class ComboEstoque(QComboBox):
-    def __init__(self):
-        super(ComboEstoque, self).__init__()
-
-        self.cursor = conexao.banco.cursor()
-        consulta_sql = "SELECT * FROM produtos"
-        self.cursor.execute(consulta_sql)
-        result = self.cursor.fetchall()
-
-        busca = []
-        for row in range(len(result)):
-            busca.append(str(result[row][0]))
-
-        # print(busca)
-        # self.setStyleSheet('font-size: 25px')
-        self.addItems(busca)
-        self.currentIndexChanged.connect(self.getComboValue)
-
-    def getComboValue(self):
-        print(self.currentText())
-        return self.currentText()
 
 
 class ListEstoque(QMainWindow):
@@ -283,6 +266,7 @@ class ListEstoque(QMainWindow):
     def cadEstoque(self):
         dlg = CadastroEstoque()
         dlg.exec()
+        self.loaddata()
 
     # def search(self):
     #     dlg = SearchEstoque()
