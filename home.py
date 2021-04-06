@@ -137,8 +137,6 @@ class CadastroEstoque(QDialog):
         for i in range(len(valor_codigo)):
             dados_lidos = valor_codigo[i][1]
 
-
-
         print(dados_lidos)
 
         codigo = ""
@@ -235,7 +233,7 @@ class ListEstoque(QMainWindow):
         toolbar.addAction(btn_ac_refresch)
 
         btn_ac_search = QAction(QIcon("Icones/pesquisa.png"), "Pesquisar dados por Cliente", self)
-        # btn_ac_search.triggered.connect(self.search)
+        btn_ac_search.triggered.connect(self.search)
         btn_ac_search.setStatusTip("Pesquisar")
         toolbar.addAction(btn_ac_search)
 
@@ -268,13 +266,72 @@ class ListEstoque(QMainWindow):
         dlg.exec()
         self.loaddata()
 
-    # def search(self):
-    #     dlg = SearchEstoque()
-    #     dlg.exec_()
+    def search(self):
+        dlg = SearchEstoque()
+        dlg.exec_()
 
     # def delete(self):
     #     dlg = DeleteEstoque()
     #     dlg.exec_()
+
+
+class SearchEstoque(QDialog):
+    """
+        Define uma nova janela onde executaremos
+        a busca no banco
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(SearchEstoque, self).__init__(*args, **kwargs)
+
+        self.cursor = conexao.banco.cursor()
+        self.QBtn = QPushButton()
+        self.QBtn.setText("Procurar")
+
+        self.setWindowTitle("Pesquisar Produto em Estoque")
+        self.setFixedWidth(300)
+        self.setFixedHeight(100)
+
+        # Chama a função de busca
+        self.QBtn.clicked.connect(self.searchProdEstoque)
+
+        layout = QVBoxLayout()
+
+        # Cria as caixas de digitaçãoe e
+        # verifica se é um numero
+        self.searchinput = QLineEdit()
+        self.onlyInt = QIntValidator()
+        self.searchinput.setValidator(self.onlyInt)
+        self.searchinput.setPlaceholderText("Codigo do Produto - somente número")
+        layout.addWidget(self.searchinput)
+
+        layout.addWidget(self.QBtn)
+        self.setLayout(layout)
+
+    # busca o produto pelo codigo
+    def searchProdEstoque(self):
+        searchroll = ""
+        searchroll = self.searchinput.text()
+
+        try:
+            consulta_estoque = "SELECT * FROM controle_clientes.estoque WHERE idproduto=" + str(searchroll)
+            self.cursor.execute(consulta_estoque)
+            result_estoque = self.cursor.fetchall()
+            for row in range(len(result_estoque)):
+                searchresult1 = "Codigo : " + str(result_estoque[0][0])+'\n'
+
+            consulta_produto = "SELECT * FROM controle_clientes.produtos WHERE codigo=" + str(searchroll)
+            self.cursor.execute(consulta_produto)
+            result_produto = self.cursor.fetchall()
+            for row in range(len(result_produto)):
+                searchresult2 = "Descrição : " + str(result_produto[0][1])
+
+            mostra = searchresult1 + searchresult2
+
+            QMessageBox.information(QMessageBox(), 'Pesquisa realizada com sucesso!', mostra)
+
+        except Exception:
+            QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A pesquisa falhou!')
 
 
 class CadastroClientes(QDialog):
@@ -421,26 +478,26 @@ class DeleteClientes(QDialog):
             QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A Deleção falhou!')
 
 
-class ComboPreco(QComboBox):
-    def __init__(self, parent):
-        super(ComboPreco, self).__init__(parent)
-
-        self.cursor = conexao.banco.cursor()
-        consulta_sql = "SELECT * FROM clientes"
-        self.cursor.execute(consulta_sql)
-        result = self.cursor.fetchall()
-
-        busca = []
-        for row in range(len(result)):
-            busca.append(str(result[row][0]))
-
-        print(busca)
-        self.setStyleSheet('font-size: 25px')
-        self.addItems(busca)
-        self.currentIndexChanged.connect(self.getComboValue)
-
-    def getComboValue(self):
-        return self.currentText()
+# class ComboPreco(QComboBox):
+#     def __init__(self, parent):
+#         super(ComboPreco, self).__init__(parent)
+#
+#         self.cursor = conexao.banco.cursor()
+#         consulta_sql = "SELECT * FROM clientes"
+#         self.cursor.execute(consulta_sql)
+#         result = self.cursor.fetchall()
+#
+#         busca = []
+#         for row in range(len(result)):
+#             busca.append(str(result[row][0]))
+#
+#         print(busca)
+#         self.setStyleSheet('font-size: 25px')
+#         self.addItems(busca)
+#         self.currentIndexChanged.connect(self.getComboValue)
+#
+#     def getComboValue(self):
+#         return self.currentText()
 
 
 class CadastroProdutos(QDialog):
