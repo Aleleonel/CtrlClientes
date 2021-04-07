@@ -12,6 +12,8 @@ from mysql.connector import OperationalError
 
 import conexao
 
+global loginok
+
 
 class AboutDialog(QDialog):
     """
@@ -318,7 +320,7 @@ class SearchEstoque(QDialog):
             self.cursor.execute(consulta_estoque)
             result_estoque = self.cursor.fetchall()
             for row in range(len(result_estoque)):
-                searchresult1 = "Codigo : " + str(result_estoque[0][0])+'\n'
+                searchresult1 = "Codigo : " + str(result_estoque[0][0]) + '\n'
 
             consulta_produto = "SELECT * FROM controle_clientes.produtos WHERE codigo=" + str(searchroll)
             self.cursor.execute(consulta_produto)
@@ -476,28 +478,6 @@ class DeleteClientes(QDialog):
 
         except Exception:
             QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A Deleção falhou!')
-
-
-# class ComboPreco(QComboBox):
-#     def __init__(self, parent):
-#         super(ComboPreco, self).__init__(parent)
-#
-#         self.cursor = conexao.banco.cursor()
-#         consulta_sql = "SELECT * FROM clientes"
-#         self.cursor.execute(consulta_sql)
-#         result = self.cursor.fetchall()
-#
-#         busca = []
-#         for row in range(len(result)):
-#             busca.append(str(result[row][0]))
-#
-#         print(busca)
-#         self.setStyleSheet('font-size: 25px')
-#         self.addItems(busca)
-#         self.currentIndexChanged.connect(self.getComboValue)
-#
-#     def getComboValue(self):
-#         return self.currentText()
 
 
 class CadastroProdutos(QDialog):
@@ -815,14 +795,6 @@ class ListClientes(QMainWindow):
         self.setWindowFlag(Qt.WindowMinimizeButtonHint, True)
         self.setWindowFlag(Qt.WindowMaximizeButtonHint, True)
 
-        # self.setHorizontalHeaderLabels(list(''))
-        # self.setColumnWidth(4, 200)
-        # self.verticalHeader().setDefaultSectionSize(25)
-        # self.horizontalHeader().setDefaultSectionSize(250)
-        #
-        # combo = ComboPreco(self)
-        # self.setCellWidget(0, 0, combo)
-
         self.setWindowTitle("SCC - SISTEMA DE CONTROLE DE CLIENTES")
         self.setMinimumSize(800, 600)
 
@@ -884,6 +856,11 @@ class ListClientes(QMainWindow):
         btn_ac_delete.setStatusTip("Deletar ")
         toolbar.addAction(btn_ac_delete)
 
+        btn_ac_sair = QAction(QIcon("Icones/sair.png"), "Sair", self)
+        # btn_ac_sair.triggered.connect(self.fechaTela)
+        btn_ac_sair.setStatusTip("Sair ")
+        toolbar.addAction(btn_ac_sair)
+
         self.show()
 
     def loaddata(self):
@@ -899,6 +876,8 @@ class ListClientes(QMainWindow):
         for i in range(0, len(result)):
             for j in range(0, 7):
                 self.tableWidget.setItem(i, j, QTableWidgetItem(str(result[i][j])))
+
+
 
     def cadClientes(self):
         dlg = CadastroClientes()
@@ -1065,7 +1044,7 @@ class MainWindow(QMainWindow):
         btn_ac_produto.setStatusTip("Produtos")
         toolbar.addAction(btn_ac_produto)
 
-        btn_ac_estoque = QAction(QIcon("Icones/estoque.png"), "Lista/Cadastraro Estoque", self)
+        btn_ac_estoque = QAction(QIcon("Icones/estoque.png"), "Lista/Cadastro Estoque", self)
         btn_ac_estoque.triggered.connect(self.listEstoque)
         btn_ac_estoque.setStatusTip("Estoque")
         toolbar.addAction(btn_ac_estoque)
@@ -1074,6 +1053,11 @@ class MainWindow(QMainWindow):
         # btn_ac_caixa.triggered.connect(self.listClientes)
         btn_ac_caixa.setStatusTip("Caixa")
         toolbar.addAction(btn_ac_caixa)
+
+        btn_ac_fechar = QAction(QIcon("Icones/sair.png"), "Sair", self)
+        btn_ac_fechar.triggered.connect(self.fechaTela)
+        btn_ac_fechar.setStatusTip("Sair")
+        toolbar.addAction(btn_ac_fechar)
 
         # Arquivo >> Adicionar
         adduser_action = QAction(QIcon("Icones/clientes.png"), "Listar/Cadastrar de Cliente", self)
@@ -1084,17 +1068,24 @@ class MainWindow(QMainWindow):
         btn_ac_produto.triggered.connect(self.listProdutos)
         file_menu.addAction(btn_ac_produto)
 
-        btn_ac_estoque = QAction(QIcon("Icones/estoque.png"), "Lista/Cadastraro Estoque", self)
-        # btn_ac_produto.triggered.connect(self.listEstoque)
+        btn_ac_estoque = QAction(QIcon("Icones/estoque.png"), "Lista/Cadastro Estoque", self)
+        btn_ac_estoque.triggered.connect(self.listEstoque)
         file_menu.addAction(btn_ac_estoque)
 
         btn_ac_caixa = QAction(QIcon("Icones/dollars.png"), "Caixa", self)
-        # btn_ac_caixa.triggered.connect(self.listClientes)
+        # btn_ac_caixa.triggered.connect(self.caixa)
         file_menu.addAction(btn_ac_caixa)
+
+        btn_ac_fechar = QAction(QIcon("Icones/sair.png"), "Sair", self)
+        btn_ac_fechar.triggered.connect(self.fechaTela)
+        file_menu.addAction(btn_ac_fechar)
 
         about_action = QAction(QIcon("Icones/sobre-nos.png"), "Desenvolvedores", self)
         about_action.triggered.connect(self.about)
         help_menu.addAction(about_action)
+
+        # self.show()
+        self.showFullScreen()
 
     def about(self):
         dlg = AboutDialog()
@@ -1112,11 +1103,81 @@ class MainWindow(QMainWindow):
         dlg = ListEstoque()
         dlg.exec()
 
+    def fechaTela(self, event):
+        replay = QMessageBox.question(self, 'Window close', 'Tem certeza de que deseja sair?',
+                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if replay == QMessageBox.Yes:
+            sys.exit()
+
+        else:
+            event.ignore()
+
+
+def telaprincipal():
+    dlg = MainWindow()
+    dlg.exec_()
+
+
+class LoginForm(QWidget):
+    def __init__(self):
+        super(LoginForm, self).__init__()
+        self.setWindowTitle('Login')
+        self.resize(500, 120)
+
+        layout = QGridLayout()
+
+        label_nome = QLabel('<font size="4"> Usuário </font>')
+        self.lineEdit_username = QLineEdit()
+        self.lineEdit_username.setPlaceholderText('Nome de Usuário')
+        layout.addWidget(label_nome, 0, 0)
+        layout.addWidget(self.lineEdit_username, 0, 1)
+
+        label_senha = QLabel('<font size="4"> Senha </font>')
+        self.lineEdit_senha = QLineEdit()
+        self.lineEdit_senha.setPlaceholderText('sua senha aqui')
+        layout.addWidget(label_senha, 1, 0)
+        layout.addWidget(self.lineEdit_senha, 1, 1)
+
+        button_login = QPushButton('Login')
+        button_login.clicked.connect(self.check_senha)
+        layout.addWidget(button_login, 2, 0, 1, 2)
+        layout.setRowMinimumHeight(2, 75)
+
+        self.setLayout(layout)
+
+    def check_senha(self):
+
+        msg = QMessageBox()
+
+        usuario = self.lineEdit_username.text()
+        senha = self.lineEdit_senha.text()
+        self.cursor = conexao.banco.cursor()
+        comando_sql = "SELECT senha FROM usuarios WHERE nome ='{}' ".format(usuario)
+
+        try:
+            self.cursor.execute(comando_sql)
+            senha_bd = self.cursor.fetchall()
+
+        except Exception as e:
+            msg.setText("Credenciais Incorretas")
+            msg.exec_()
+
+        if senha == senha_bd[0][0]:
+            self.hide()
+            telaprincipal()
+            msg.setText("Sucesso")
+            msg.exec_()
+            conexao.banco.close()
+        else:
+            msg.setText("Credenciais Incorretas")
+            msg.exec_()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+
 if QDialog.Accepted:
-    window = MainWindow()
-    window.show()
-    # window.loaddata()
+    form = LoginForm()
+    form.show()
+
 sys.exit((app.exec_()))
