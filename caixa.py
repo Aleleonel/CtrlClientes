@@ -17,6 +17,8 @@ class DataEntryForm(QWidget):
                       "Car Payment": 420.0, "Comcast": 105.0,
                       "Public transportation": 60.0, "Coffee": 90.5}
 
+        print(self.total)
+
         # left side
         self.table = QTableWidget()
         self.table.setColumnCount(2)
@@ -140,10 +142,11 @@ class DataEntryForm(QWidget):
             self.table.setItem(self.items, 1, priceItem)
             self.items += 1
 
-            ttotal = 0
-            ttotal += sum(self.total)
-            tot_format = ('R${0:.2f} '.format(float(ttotal)))
+            self.ttotal = 0
+            self.ttotal += sum(self.total)
+            tot_format = ('R${0:.2f} '.format(float(self.ttotal)))
             self.lbl_total.setText(str(tot_format))
+
 
             self.lineEditDescription.setText('')
             self.lineEditPrice.setText('')
@@ -159,6 +162,8 @@ class DataEntryForm(QWidget):
     def reset_table(self):
         self.table.setRowCount(0)
         self.items = 0
+        self.ttotal = 0
+        self.total = []
         self.lbl_total.setText('R$ 0.00')
 
         # chart = QChart()
