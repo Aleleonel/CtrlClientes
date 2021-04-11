@@ -1020,6 +1020,12 @@ class DataEntryForm(QWidget):
         consulta_sql = "SELECT * FROM clientes"
         self.cursor.execute(consulta_sql)
         result = self.cursor.fetchall()
+        self.close()
+
+        self.cursor = conexao.banco.cursor()
+        consulta_prod = "SELECT * FROM produtos"
+        self.cursor.execute(consulta_prod)
+        result_prod = self.cursor.fetchall()
 
         self.items = 0
         self.total = list()
@@ -1058,8 +1064,18 @@ class DataEntryForm(QWidget):
         self.lineEditCliente.editingFinished.connect(self.addCliente)
         self.layoutRight.addWidget(self.lineEditCliente)
 
+        produtos = []
+        for i in range(len(result_prod)):
+            if result_prod[i][1]:
+                produtos.append(result_prod[i][1])
+
         self.lineEditDescription = QLineEdit()
         self.lineEditDescription.setPlaceholderText('Descrição')
+        self.model_prod = QStandardItemModel()
+        self.model_prod = produtos
+        completer_prod = QCompleter(self.model_prod, self)
+        self.lineEditDescription.setCompleter(completer_prod)
+        self.lineEditDescription.editingFinished.connect(self.addProdutos)
         self.layoutRight.addWidget(self.lineEditDescription)
 
         self.lineEditPrice = QLineEdit()
@@ -1127,6 +1143,10 @@ class DataEntryForm(QWidget):
         entryItem = self.lineEditCliente.text()
         print(entryItem[0::])
 
+    def addProdutos(self):
+            entryItem = self.lineEditDescription.text()
+            print(entryItem[0::])
+
     def fill_table(self, data=None):
         data = self._data if not data else data
 
@@ -1188,7 +1208,7 @@ class DataEntryForm(QWidget):
         for i in range(self.table.rowCount()):
             text = self.table.item(i, 0).text()
             val = float(self.table.item(i, 1).text().replace('R$', ''))
-            series.append(text, val)
+            # series.append(text, val)
 
 
 class MainWindow(QMainWindow):
