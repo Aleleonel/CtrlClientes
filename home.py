@@ -1016,6 +1016,11 @@ class DataEntryForm(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.cursor = conexao.banco.cursor()
+        consulta_sql = "SELECT * FROM clientes"
+        self.cursor.execute(consulta_sql)
+        result = self.cursor.fetchall()
+
         self.items = 0
         self.total = list()
         self._data = {"Phone bill": 50.5, "Gas": 30.0, "Rent": 1850.0,
@@ -1039,8 +1044,18 @@ class DataEntryForm(QWidget):
         self.lbl_titulo.setAlignment(Qt.AlignCenter)
         self.layoutRight.addWidget(self.lbl_titulo)
 
+        clientes = []
+        for i in range(len(result)):
+            if result[i][2]:
+                clientes.append(result[i][2])
+
         self.lineEditCliente = QLineEdit()
         self.lineEditCliente.setPlaceholderText('Nome / Razão')
+        self.model = QStandardItemModel()
+        self.model = clientes
+        completer = QCompleter(self.model, self)
+        self.lineEditCliente.setCompleter(completer)
+        self.lineEditCliente.editingFinished.connect(self.addCliente)
         self.layoutRight.addWidget(self.lineEditCliente)
 
         self.lineEditDescription = QLineEdit()
@@ -1049,6 +1064,7 @@ class DataEntryForm(QWidget):
 
         self.lineEditPrice = QLineEdit()
         self.lineEditPrice.setPlaceholderText('R$: Preço')
+
         self.layoutRight.addWidget(self.lineEditPrice)
 
         self.lbl_total = QLabel()
@@ -1107,6 +1123,10 @@ class DataEntryForm(QWidget):
 
         self.fill_table()
 
+    def addCliente(self):
+        entryItem = self.lineEditCliente.text()
+        print(entryItem[0::])
+
     def fill_table(self, data=None):
         data = self._data if not data else data
 
@@ -1122,9 +1142,9 @@ class DataEntryForm(QWidget):
 
     def add_entry(self):
         desc = self.lineEditDescription.text()
-        price = self.lineEditPrice.text()
+        price = float(self.lineEditPrice.text())
 
-        self.total.append(int(price))
+        self.total.append(float(price))
 
         try:
             descItem = QTableWidgetItem(desc)
@@ -1257,9 +1277,9 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def caixa(self):
-        # dlg = DataEntryForm()
-        # dlg.exec()
-        telaprincipal()
+        self.hide()
+        dlg = telaprincipal()
+        dlg.exec()
 
     def listClientes(self):
         dlg = ListClientes()
@@ -1295,14 +1315,10 @@ class MainWindow(QMainWindow):
             print(e)
 
 
-
-
 def telaprincipal():
     w = DataEntryForm()
     dlg = MainWindow(w)
     dlg.exec_()
-
-
 
 
 class LoginForm(QWidget):

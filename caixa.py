@@ -1,10 +1,17 @@
-# -*- coding: utf-8 -*-
-import csv
-import sys
-
-from PyQt5.Qt import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-# from PyQt5.QtQtchart import *
+from PyQt5.QtPrintSupport import *
+
+import time
+import os
+import sys
+import csv
+
+import mysql.connector
+from mysql.connector import OperationalError
+
+import conexao
 
 
 class DataEntryForm(QWidget):
@@ -18,6 +25,11 @@ class DataEntryForm(QWidget):
                       "Public transportation": 60.0, "Coffee": 90.5}
 
         print(self.total)
+
+        self.cursor = conexao.banco.cursor()
+        consulta_sql = "SELECT * FROM clientes"
+        self.cursor.execute(consulta_sql)
+        result = self.cursor.fetchall()
 
         # left side
         self.table = QTableWidget()
@@ -36,16 +48,24 @@ class DataEntryForm(QWidget):
 
         self.lbl_titulo = QLabel("Caixa")
         self.lbl_titulo.setFont(QFont("Times", 42, QFont.Bold))
-
         # self.lbl_titulo.setPixmap(QPixmap('Icones/add.png'))
-
         self.lbl_titulo.setStyleSheet("border-radius: 25px;border: 1px solid black;")
         self.lbl_titulo.setAlignment(Qt.AlignCenter)
         self.layoutRight.addWidget(self.lbl_titulo)
 
+        clientes = []
+        for i in range(len(result)):
+            if result[i][2]:
+                clientes.append(result[i][2])
+
 
         self.lineEditCliente = QLineEdit()
         self.lineEditCliente.setPlaceholderText('Nome / Razão')
+        self.model = QStandardItemModel()
+        self.model = clientes
+        completer = QCompleter(self.model, self)
+        self.lineEditCliente.setCompleter(completer)
+        self.lineEditCliente.editingFinished.connect(self.addCliente)
         self.layoutRight.addWidget(self.lineEditCliente)
 
         self.lineEditDescription = QLineEdit()
@@ -111,6 +131,10 @@ class DataEntryForm(QWidget):
         self.lineEditPrice.textChanged[str].connect(self.check_disable)
 
         self.fill_table()
+
+    def addCliente(self):
+        entryItem = self.lineEditCliente.text()
+        print(entryItem[0::])
 
     def fill_table(self, data=None):
         data = self._data if not data else data
