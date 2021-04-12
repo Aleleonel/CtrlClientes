@@ -1033,15 +1033,29 @@ class DataEntryForm(QWidget):
 
         self.items = 0
         self.total = list()
-        self._data = {"Phone bill": 50.5, "Gas": 30.0, "Rent": 1850.0,
-                      "Car Payment": 420.0, "Comcast": 105.0,
-                      "Public transportation": 60.0, "Coffee": 90.5}
+        self._data = {}
+        # self._data = {"Phone bill": 50.5, "Gas": 30.0, "Rent": 1850.0,
+        #                       "Car Payment": 420.0, "Comcast": 105.0,
+        #                       "Public transportation": 60.0, "Coffee": 90.5}
+
+        # DATA DO PEDIDO
+        d = QDate.currentDate()
+        dataAtual = d.toString(Qt.ISODate)
+        data_pedido = str(dataAtual)
+
+        # formulario_cadenderecos.ldData.setText(data)
 
         # left side
         self.table = QTableWidget()
-        self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(('Descrição', 'Qtd', 'Preço Un.', 'Sub Total'))
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.setColumnCount(5)
+        #                                       0         1          2        3            4
+        self.table.setHorizontalHeaderLabels(('Cod.', 'Descrição', 'Qtd', 'Preço Un.', 'Sub Total'))
+        # self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
 
         self.layoutRight = QVBoxLayout()
 
@@ -1053,6 +1067,10 @@ class DataEntryForm(QWidget):
         self.lbl_titulo.setStyleSheet("border-radius: 25px;border: 1px solid black;")
         self.lbl_titulo.setAlignment(Qt.AlignCenter)
         self.layoutRight.addWidget(self.lbl_titulo)
+
+        self.lineEditdata = QLineEdit()
+        self.lineEditdata.setText(data_pedido)
+        self.layoutRight.addWidget(self.lineEditdata)
 
         clientes = []
         for i in range(len(result)):
@@ -1075,7 +1093,7 @@ class DataEntryForm(QWidget):
                 produtos.append(result_prod[i][1])
 
         self.lineEditDescription = QLineEdit()
-        self.lineEditDescription.setPlaceholderText('Descrição')
+        self.lineEditDescription.setPlaceholderText('Descrição / Produto')
         self.model_prod = QStandardItemModel()
         self.model_prod = produtos
         completer_prod = QCompleter(self.model_prod, self)
@@ -1145,6 +1163,7 @@ class DataEntryForm(QWidget):
         self.buttonQuit.clicked.connect(lambda: self.hide())
         self.buttonClear.clicked.connect(self.reset_table)
         self.butotnCupon.clicked.connect(self.cupom)
+        self.buttonefetivar.clicked.connect(self.efetiva)
         self.buttonAdd.clicked.connect(self.add_entry)
 
         self.lineEditDescription.textChanged[str].connect(self.check_disable)
@@ -1168,10 +1187,13 @@ class DataEntryForm(QWidget):
 
         for i in range(len(result_prod)):
             if result_prod[i][1] == entryItem:
+
+                self.codigo = result_prod[i][0]
                 self.preco = result_prod[i][4]
                 self.TOTAL += self.preco
                 self.lineEditPrice.setText(str(self.preco))
 
+        print(self.codigo)
         print(self.preco)
         print(self.TOTAL)
 
@@ -1189,6 +1211,7 @@ class DataEntryForm(QWidget):
             self.items += 1
 
     def add_entry(self):
+        cod = self.codigo
         desc = self.lineEditDescription.text()
         qtd = int(self.lineEditQtd.text())
         price = float(self.lineEditPrice.text())
@@ -1199,7 +1222,9 @@ class DataEntryForm(QWidget):
         self.total.append(float(sub_total))
 
         try:
+            codItem = QTableWidgetItem(str(cod))
             descItem = QTableWidgetItem(desc)
+
             qtdItem = QTableWidgetItem(str(qtd))
             qtdItem.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
 
@@ -1210,10 +1235,11 @@ class DataEntryForm(QWidget):
             priceItem.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
 
             self.table.insertRow(self.items)
-            self.table.setItem(self.items, 0, descItem)
-            self.table.setItem(self.items, 1, qtdItem)
-            self.table.setItem(self.items, 2, priceItem)
-            self.table.setItem(self.items, 3, subItem)
+            self.table.setItem(self.items, 0, codItem)
+            self.table.setItem(self.items, 1, descItem)
+            self.table.setItem(self.items, 2, qtdItem)
+            self.table.setItem(self.items, 3, priceItem)
+            self.table.setItem(self.items, 4, subItem)
             self.items += 1
 
             self.ttotal = 0
@@ -1250,12 +1276,35 @@ class DataEntryForm(QWidget):
         # self.chartView.setChart(chart)
 
     def cupom(self):
-        series = list
+        for i in range(self.table.rowCount()):
+            cod = self.table.item(i, 0).text()
+            text = self.table.item(i, 1).text()
+            qtd = float(self.table.item(i, 2).text())
+            valUn = float(self.table.item(i, 3).text().replace('R$', ''))
+            valTot = float(self.table.item(i, 4).text().replace('R$', ''))
+
+            print(cod)
+            print(text)
+            print(qtd)
+            print(valUn)
+            print(valTot)
+        print('CUPOM IMPRESSO')
+
+    def efetiva(self):
 
         for i in range(self.table.rowCount()):
-            text = self.table.item(i, 0).text()
-            val = float(self.table.item(i, 1).text().replace('R$', ''))
-            # series.append(text, val)
+            cod = self.table.item(i, 0).text()
+            text = self.table.item(i, 1).text()
+            qtd = float(self.table.item(i, 2).text())
+            valUn = float(self.table.item(i, 3).text().replace('R$', ''))
+            valTot = float(self.table.item(i, 4).text().replace('R$', ''))
+
+            print(cod)
+            print(text)
+            print(qtd)
+            print(valUn)
+            print(valTot)
+        print('PEDIDO EFETIVADO')
 
 
 class MainWindow(QMainWindow):
