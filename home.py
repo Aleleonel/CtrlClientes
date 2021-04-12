@@ -1030,6 +1030,7 @@ class DataEntryForm(QWidget):
 
         self.preco = 0
         self.TOTAL = 0
+
         self.items = 0
         self.total = list()
         self._data = {"Phone bill": 50.5, "Gas": 30.0, "Rent": 1850.0,
@@ -1038,8 +1039,8 @@ class DataEntryForm(QWidget):
 
         # left side
         self.table = QTableWidget()
-        self.table.setColumnCount(2)
-        self.table.setHorizontalHeaderLabels(('Descrição', 'Preço'))
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(('Descrição', 'Qtd', 'Preço Un.', 'Sub Total'))
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         self.layoutRight = QVBoxLayout()
@@ -1082,7 +1083,16 @@ class DataEntryForm(QWidget):
         self.lineEditDescription.editingFinished.connect(self.addProdutos)
         self.layoutRight.addWidget(self.lineEditDescription)
 
+        self.lineEditQtd = QLineEdit()
+        self.onlyInt = QIntValidator()
+        self.lineEditQtd.setValidator(self.onlyInt)
+        self.lineEditQtd.setPlaceholderText('Quantidade')
+        self.layoutRight.addWidget(self.lineEditQtd)
+
         self.lineEditPrice = QLineEdit()
+        self.onlyFloat = QDoubleValidator()
+        self.lineEditPrice.setValidator(self.onlyFloat)
+
         self.lineEditPrice.setPlaceholderText('R$: Preço')
         self.layoutRight.addWidget(self.lineEditPrice)
 
@@ -1180,18 +1190,30 @@ class DataEntryForm(QWidget):
 
     def add_entry(self):
         desc = self.lineEditDescription.text()
+        qtd = int(self.lineEditQtd.text())
         price = float(self.lineEditPrice.text())
 
-        self.total.append(float(price))
+        sub_total = float(qtd * price)
+        sub_ttotal = str(sub_total)
+
+        self.total.append(float(sub_total))
 
         try:
             descItem = QTableWidgetItem(desc)
+            qtdItem = QTableWidgetItem(str(qtd))
+            qtdItem.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+
+            subItem = QTableWidgetItem('R${0:.2f} '.format(float(sub_ttotal)))
+            subItem.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+
             priceItem = QTableWidgetItem('R${0:.2f} '.format(float(price)))
             priceItem.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
 
             self.table.insertRow(self.items)
             self.table.setItem(self.items, 0, descItem)
-            self.table.setItem(self.items, 1, priceItem)
+            self.table.setItem(self.items, 1, qtdItem)
+            self.table.setItem(self.items, 2, priceItem)
+            self.table.setItem(self.items, 3, subItem)
             self.items += 1
 
             self.ttotal = 0
@@ -1200,6 +1222,7 @@ class DataEntryForm(QWidget):
             self.lbl_total.setText(str(tot_format))
 
             self.lineEditDescription.setText('')
+            self.lineEditQtd.setText('')
             self.lineEditPrice.setText('')
         except ValueError:
             pass
@@ -1217,6 +1240,10 @@ class DataEntryForm(QWidget):
         self.preco = 0
         self.TOTAL = 0
         self.total = []
+        self.lineEditCliente.setText('')
+        self.lineEditDescription.setText('')
+        self.lineEditQtd.setText('')
+        self.lineEditPrice.setText('')
         self.lbl_total.setText('R$ 0.00')
 
         # chart = QChart()
