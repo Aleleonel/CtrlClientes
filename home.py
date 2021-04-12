@@ -1026,7 +1026,10 @@ class DataEntryForm(QWidget):
         consulta_prod = "SELECT * FROM produtos"
         self.cursor.execute(consulta_prod)
         result_prod = self.cursor.fetchall()
+        self.close()
 
+        self.preco = 0
+        self.TOTAL = 0
         self.items = 0
         self.total = list()
         self._data = {"Phone bill": 50.5, "Gas": 30.0, "Rent": 1850.0,
@@ -1065,6 +1068,7 @@ class DataEntryForm(QWidget):
         self.layoutRight.addWidget(self.lineEditCliente)
 
         produtos = []
+
         for i in range(len(result_prod)):
             if result_prod[i][1]:
                 produtos.append(result_prod[i][1])
@@ -1080,7 +1084,6 @@ class DataEntryForm(QWidget):
 
         self.lineEditPrice = QLineEdit()
         self.lineEditPrice.setPlaceholderText('R$: Preço')
-
         self.layoutRight.addWidget(self.lineEditPrice)
 
         self.lbl_total = QLabel()
@@ -1144,8 +1147,23 @@ class DataEntryForm(QWidget):
         print(entryItem[0::])
 
     def addProdutos(self):
-            entryItem = self.lineEditDescription.text()
-            print(entryItem[0::])
+
+        self.cursor = conexao.banco.cursor()
+        consulta_prod = "SELECT * FROM produtos"
+        self.cursor.execute(consulta_prod)
+        result_prod = self.cursor.fetchall()
+
+        entryItem = self.lineEditDescription.text()
+        print(entryItem[0::])
+
+        for i in range(len(result_prod)):
+            if result_prod[i][1] == entryItem:
+                self.preco = result_prod[i][4]
+                self.TOTAL += self.preco
+                self.lineEditPrice.setText(str(self.preco))
+
+        print(self.preco)
+        print(self.TOTAL)
 
     def fill_table(self, data=None):
         data = self._data if not data else data
@@ -1196,6 +1214,8 @@ class DataEntryForm(QWidget):
         self.table.setRowCount(0)
         self.items = 0
         self.ttotal = 0
+        self.preco = 0
+        self.TOTAL = 0
         self.total = []
         self.lbl_total.setText('R$ 0.00')
 
