@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtPrintSupport import *
 
-import time
+import time, datetime
 import os
 import sys
 import csv
@@ -1043,7 +1043,6 @@ class DataEntryForm(QWidget):
         dataAtual = d.toString(Qt.ISODate)
         data_pedido = str(dataAtual)
 
-        # formulario_cadenderecos.ldData.setText(data)
 
         # left side
         self.table = QTableWidget()
@@ -1064,7 +1063,7 @@ class DataEntryForm(QWidget):
         self.lbl_titulo = QLabel("Caixa")
         self.lbl_titulo.setFont(QFont("Times", 42, QFont.Bold))
         # self.lbl_titulo.setPixmap(QPixmap('Icones/add.png'))
-        self.lbl_titulo.setStyleSheet("border-radius: 25px;border: 1px solid black;")
+        # self.lbl_titulo.setStyleSheet("border-radius: 25px;border: 1px solid black;")
         self.lbl_titulo.setAlignment(Qt.AlignCenter)
         self.layoutRight.addWidget(self.lbl_titulo)
 
@@ -1118,7 +1117,7 @@ class DataEntryForm(QWidget):
         self.lbl_total.setText('R$ 0.00')
         self.lbl_total.setFont(QFont("Times", 42, QFont.Bold))
         self.lbl_total.setAlignment(Qt.AlignCenter)
-        self.lbl_total.setStyleSheet("border-radius: 25px;border: 1px solid black;")
+        # self.lbl_total.setStyleSheet("border-radius: 25px;border: 1px solid black;")
         self.layoutRight.addWidget(self.lbl_total)
 
         self.buttonAdd = QPushButton("Adicionar", self)
@@ -1187,15 +1186,10 @@ class DataEntryForm(QWidget):
 
         for i in range(len(result_prod)):
             if result_prod[i][1] == entryItem:
-
                 self.codigo = result_prod[i][0]
                 self.preco = result_prod[i][4]
                 self.TOTAL += self.preco
                 self.lineEditPrice.setText(str(self.preco))
-
-        print(self.codigo)
-        print(self.preco)
-        print(self.TOTAL)
 
     def fill_table(self, data=None):
         data = self._data if not data else data
@@ -1272,9 +1266,6 @@ class DataEntryForm(QWidget):
         self.lineEditPrice.setText('')
         self.lbl_total.setText('R$ 0.00')
 
-        # chart = QChart()
-        # self.chartView.setChart(chart)
-
     def cupom(self):
         for i in range(self.table.rowCount()):
             cod = self.table.item(i, 0).text()
@@ -1292,18 +1283,75 @@ class DataEntryForm(QWidget):
 
     def efetiva(self):
 
-        for i in range(self.table.rowCount()):
-            cod = self.table.item(i, 0).text()
-            text = self.table.item(i, 1).text()
-            qtd = float(self.table.item(i, 2).text())
-            valUn = float(self.table.item(i, 3).text().replace('R$', ''))
-            valTot = float(self.table.item(i, 4).text().replace('R$', ''))
+        d = QDate.currentDate()
+        dataAtual = d.toString(Qt.ISODate)
+        dataAtual = str(dataAtual)
+        data_anterior = str(d.addDays(-1).toString(Qt.ISODate))
+        nr_caixa = 0
 
-            print(cod)
-            print(text)
-            print(qtd)
-            print(valUn)
-            print(valTot)
+
+        print(data_anterior)
+        print(dataAtual)
+
+        nome = self.lineEditCliente.text()
+        self.cursor = conexao.banco.cursor()
+        comando_sql = "SELECT nr_caixa, ultupdate FROM caixa WHERE ultupdate ='{}' ".format(data_anterior)
+        try:
+            self.cursor.execute(comando_sql)
+            result_data = self.cursor.fetchall()
+            datacaixa = result_data[0][1]
+            nr_caixa = result_data[0][0]
+            nr_caixa += 1
+            print(nr_caixa)
+            print(datacaixa)
+
+        except Exception as e:
+            print(e)
+
+        self.cursor = conexao.banco.cursor()
+        comando_sql = "SELECT codigo FROM clientes WHERE nome ='{}' ".format(nome)
+        try:
+            self.cursor.execute(comando_sql)
+            cod_cli = self.cursor.fetchall()
+            codigo = cod_cli[0][0]
+
+        except Exception as e:
+            pass
+
+        for i in range(self.table.rowCount()):
+            self.cod_prod = self.table.item(i, 0).text()
+            self.text = self.table.item(i, 1).text()
+            self.qtd = float(self.table.item(i, 2).text())
+            self.valUn = float(self.table.item(i, 3).text().replace('R$', ''))
+            self.valTot = float(self.table.item(i, 4).text().replace('R$', ''))
+
+            self.cursor = conexao.banco.cursor()
+            comando_sql = "INSERT INTO caixa (nr_caixa, id_produtos, id_vendedor, id_cliente, quantidade," \
+                          "valor_total,ultupdate) VALUES (%s,%s,%s,%s,%s,%s,%s)"
+            dados = nr_caixa, self.cod_prod, 1, codigo, self.qtd, self.valTot, dataAtual
+            self.cursor.execute(comando_sql, dados)
+
+            conexao.banco.commit()
+            self.cursor.close()
+
+        # self.cursor = conexao.banco.cursor()
+        # consulta_prod = "SELECT idproduto, estoque FROM estoque WHERE idproduto = " + self.cod
+        # self.cursor.execute(consulta_prod)
+        # result_prod = self.cursor.fetchall()
+        # for i in range(len(result_prod)):
+        #     print(result_prod[i])
+
+        # self.cursor = conexao.banco.cursor()
+        # consulta_prod = "CREATE TRIGGER tgr_itensVenda_insert AFTER INSERT" \
+        #                 "ON caixa" \
+        #                 "FOR EACH ROW" \
+        #                 "BEGIN" \
+        #                 "UPDATE estoque SET estoque = estoque - NEW.quantidade" \
+        #                 "WHERE id_produtos = idproduto"
+        # self.cursor.execute(consulta_prod)
+        # result_prod = self.cursor.fetchall()
+
+
         print('PEDIDO EFETIVADO')
 
 
