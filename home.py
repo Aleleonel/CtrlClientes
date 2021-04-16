@@ -1,3 +1,6 @@
+from unicodedata import decimal
+
+from PyQt5 import QtCore
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -1033,6 +1036,7 @@ class DataEntryForm(QWidget):
 
         self.items = 0
         self.total = list()
+        self.calculaitens = list()
         self._data = {}
         # self._data = {"Phone bill": 50.5, "Gas": 30.0, "Rent": 1850.0,
         #                       "Car Payment": 420.0, "Comcast": 105.0,
@@ -1042,7 +1046,6 @@ class DataEntryForm(QWidget):
         d = QDate.currentDate()
         dataAtual = d.toString(Qt.ISODate)
         data_pedido = str(dataAtual)
-
 
         # left side
         self.table = QTableWidget()
@@ -1104,12 +1107,12 @@ class DataEntryForm(QWidget):
         self.onlyInt = QIntValidator()
         self.lineEditQtd.setValidator(self.onlyInt)
         self.lineEditQtd.setPlaceholderText('Quantidade')
+
         self.layoutRight.addWidget(self.lineEditQtd)
 
         self.lineEditPrice = QLineEdit()
         self.onlyFloat = QDoubleValidator()
         self.lineEditPrice.setValidator(self.onlyFloat)
-
         self.lineEditPrice.setPlaceholderText('R$: Preço')
         self.layoutRight.addWidget(self.lineEditPrice)
 
@@ -1129,6 +1132,11 @@ class DataEntryForm(QWidget):
         self.buttonClear.setIcon(QIcon("Icones/clear.png"))
         self.buttonClear.setIconSize(QSize(40, 40))
         self.buttonClear.setMinimumHeight(40)
+
+        self.buttonClearOne = QPushButton("Remove", self)
+        self.buttonClearOne.setIcon(QIcon("Icones/clear.png"))
+        self.buttonClearOne.setIconSize(QSize(40, 40))
+        self.buttonClearOne.setMinimumHeight(40)
 
         self.buttonefetivar = QPushButton("Efetivar", self)
         self.buttonefetivar.setIcon(QIcon("Icones/dollars.png"))
@@ -1151,6 +1159,7 @@ class DataEntryForm(QWidget):
         self.layoutRight.addWidget(self.butotnCupon)
         self.layoutRight.addWidget(self.buttonefetivar)
         self.layoutRight.addWidget(self.buttonClear)
+        self.layoutRight.addWidget(self.buttonClearOne)
         self.layoutRight.addWidget(self.buttonQuit)
 
         self.layout = QHBoxLayout()
@@ -1161,6 +1170,7 @@ class DataEntryForm(QWidget):
 
         self.buttonQuit.clicked.connect(lambda: self.hide())
         self.buttonClear.clicked.connect(self.reset_table)
+        self.buttonClearOne.clicked.connect(self.excluir_dados)
         self.butotnCupon.clicked.connect(self.cupom)
         self.buttonefetivar.clicked.connect(self.efetiva)
         self.buttonAdd.clicked.connect(self.add_entry)
@@ -1205,27 +1215,48 @@ class DataEntryForm(QWidget):
             self.items += 1
 
     def add_entry(self):
-        cod = self.codigo
-        desc = self.lineEditDescription.text()
-        qtd = int(self.lineEditQtd.text())
-        price = float(self.lineEditPrice.text())
+        self.sub_total = 0
+        if self.table.rowCount() > 0:
+            self.calculaitens = []
+            linha = self.table.rowCount()
+            row = linha
+            while row > 0:
+                row -= 1
+                col = self.table.columnCount()
+                resultado = 0
+                for x in range(0, col, 1):
+                    self.headertext = self.table.horizontalHeaderItem(x).text()
+                    if self.headertext == 'Sub Total':
+                        cabCol = x
+                        resultado = self.table.item(row, cabCol).text()
+                        recebe = resultado.replace("R$", "0")
+                        self.calculaitens.append(float(recebe))
 
-        sub_total = float(qtd * price)
-        sub_ttotal = str(sub_total)
+                self.ttotal = 0
+                self.ttotal += sum(self.calculaitens)
+                tot_format = ('R${0:.2f} '.format(float(self.ttotal)))
+                self.lbl_total.setText(str(tot_format))
 
-        self.total.append(float(sub_total))
+        sum(self.total)
+        self.cod = self.codigo
+        self.desc = self.lineEditDescription.text()
+        self.qtd = int(self.lineEditQtd.text())
+        self.price = float(self.lineEditPrice.text())
+        self.sub_total = float(self.qtd * self.price)
+        self.sub_ttotal = str(self.sub_total)
+        self.total.append(float(self.sub_total))
 
         try:
-            codItem = QTableWidgetItem(str(cod))
-            descItem = QTableWidgetItem(desc)
+            codItem = QTableWidgetItem(str(self.cod))
+            descItem = QTableWidgetItem(self.desc)
 
-            qtdItem = QTableWidgetItem(str(qtd))
+            qtdItem = QTableWidgetItem(str(self.qtd))
             qtdItem.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
 
-            subItem = QTableWidgetItem('R${0:.2f} '.format(float(sub_ttotal)))
+            subItem = QTableWidgetItem('R${0:.2f} '.format(float(self.sub_ttotal)))
             subItem.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
 
-            priceItem = QTableWidgetItem('R${0:.2f} '.format(float(price)))
+            priceItem = QTableWidgetItem('R${0:.2f} '.format(float(self.price)))
             priceItem.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
 
             self.table.insertRow(self.items)
@@ -1234,10 +1265,27 @@ class DataEntryForm(QWidget):
             self.table.setItem(self.items, 2, qtdItem)
             self.table.setItem(self.items, 3, priceItem)
             self.table.setItem(self.items, 4, subItem)
-            self.items += 1
 
+            # teste de calculo celula
+            # dado um qtablewidget que tem uma linha selecionada ...
+            # retorna o valor da coluna na mesma linha que corresponde a um determinado nome de coluna
+            # fyi: o nome da coluna diferencia maiúsculas de minúsculas
+            row = self.items
+            col = self.table.columnCount()
+            resultado = 0
+            for x in range(0, col, 1):
+                self.headertext = self.table.horizontalHeaderItem(x).text()
+                if self.headertext == 'Sub Total':
+                    cabCol = x
+                    resultado = self.table.item(row, cabCol).text()
+                    recebe = resultado.replace("R$", "0")
+                    self.calculaitens.append(float(recebe))
+            print(self.calculaitens)
+
+            self.items += 1
             self.ttotal = 0
-            self.ttotal += sum(self.total)
+            # self.ttotal += sum(self.total)
+            self.ttotal += sum(self.calculaitens)
             tot_format = ('R${0:.2f} '.format(float(self.ttotal)))
             self.lbl_total.setText(str(tot_format))
 
@@ -1259,12 +1307,51 @@ class DataEntryForm(QWidget):
         self.ttotal = 0
         self.preco = 0
         self.TOTAL = 0
-        self.total = []
+        # self.total = []
+        self.calculaitens = []
         self.lineEditCliente.setText('')
         self.lineEditDescription.setText('')
         self.lineEditQtd.setText('')
         self.lineEditPrice.setText('')
         self.lbl_total.setText('R$ 0.00')
+
+    # def excluir_dados(self):
+    #     if self.table.rowCount() > 0:
+    #         self.table.removeRow(self.table.rowCount() - 1)
+    #         self.total.pop()
+
+    @QtCore.pyqtSlot()
+    def excluir_dados(self):
+        if self.table.rowCount() > 0:
+            linha = self.table.currentRow()
+            self.table.removeRow(linha)
+            self.items -= 1
+            self.lineEditDescription.setText('')
+            self.lineEditQtd.setText('')
+            self.lineEditPrice.setText('')
+
+            self.calculaitens = []
+            linha = self.table.rowCount()
+            row = linha
+            while row > 0:
+                row -= 1
+                col = self.table.columnCount()
+                resultado = 0
+                for x in range(0, col, 1):
+                    self.headertext = self.table.horizontalHeaderItem(x).text()
+                    if self.headertext == 'Sub Total':
+                        cabCol = x
+                        resultado = self.table.item(row, cabCol).text()
+                        recebe = resultado.replace("R$", "0")
+                        self.calculaitens.append(float(recebe))
+
+                self.ttotal = 0
+                self.ttotal += sum(self.calculaitens)
+                tot_format = ('R${0:.2f} '.format(float(self.ttotal)))
+                self.lbl_total.setText(str(tot_format))
+        else:
+            self.lbl_total.setText('R$ 0.00')
+
 
     def cupom(self):
         for i in range(self.table.rowCount()):
@@ -1281,43 +1368,43 @@ class DataEntryForm(QWidget):
             print(valTot)
         print('CUPOM IMPRESSO')
 
+    def numeroPedido(self):
+        d = QDate.currentDate()
+        data_anterior = str(d.addDays(-1).toString(Qt.ISODate))
+        nr_caixa = 0
+
+        self.cursor = conexao.banco.cursor()
+        comando_sql = "SELECT nr_caixa, ultupdate FROM caixa WHERE ultupdate ='{}' ".format(data_anterior)
+        self.cursor.execute(comando_sql)
+        result_data = self.cursor.fetchall()
+
+        datacaixa = result_data[0][1]
+        if datacaixa:
+            nr_caixa = result_data[0][0]
+            nr_caixa += 1
+        else:
+            nr_caixa = 1
+        return nr_caixa
+
+    def codigoclientepedido(self):
+        nome = self.lineEditCliente.text()
+        self.cursor = conexao.banco.cursor()
+        comando_sql = "SELECT codigo FROM clientes WHERE nome ='{}' ".format(nome)
+        self.cursor.execute(comando_sql)
+        cod_cli = self.cursor.fetchall()
+        codigo = cod_cli[0][0]
+        return codigo
+
     def efetiva(self):
 
         d = QDate.currentDate()
         dataAtual = d.toString(Qt.ISODate)
         dataAtual = str(dataAtual)
-        data_anterior = str(d.addDays(-1).toString(Qt.ISODate))
-        nr_caixa = 0
 
-
-        print(data_anterior)
-        print(dataAtual)
-
-        nome = self.lineEditCliente.text()
-        self.cursor = conexao.banco.cursor()
-        comando_sql = "SELECT nr_caixa, ultupdate FROM caixa WHERE ultupdate ='{}' ".format(data_anterior)
-        try:
-            self.cursor.execute(comando_sql)
-            result_data = self.cursor.fetchall()
-            datacaixa = result_data[0][1]
-            nr_caixa = result_data[0][0]
-            nr_caixa += 1
-            print(nr_caixa)
-            print(datacaixa)
-
-        except Exception as e:
-            print(e)
+        nr_caixa = self.numeroPedido()
+        codigo = self.codigoclientepedido()
 
         self.cursor = conexao.banco.cursor()
-        comando_sql = "SELECT codigo FROM clientes WHERE nome ='{}' ".format(nome)
-        try:
-            self.cursor.execute(comando_sql)
-            cod_cli = self.cursor.fetchall()
-            codigo = cod_cli[0][0]
-
-        except Exception as e:
-            pass
-
         for i in range(self.table.rowCount()):
             self.cod_prod = self.table.item(i, 0).text()
             self.text = self.table.item(i, 1).text()
@@ -1325,32 +1412,11 @@ class DataEntryForm(QWidget):
             self.valUn = float(self.table.item(i, 3).text().replace('R$', ''))
             self.valTot = float(self.table.item(i, 4).text().replace('R$', ''))
 
-            self.cursor = conexao.banco.cursor()
-            comando_sql = "INSERT INTO caixa (nr_caixa, id_produtos, id_vendedor, id_cliente, quantidade," \
-                          "valor_total,ultupdate) VALUES (%s,%s,%s,%s,%s,%s,%s)"
+            comando_sql = "INSERT INTO pedidocaixa (nr_caixa, cod_produto, cod_vendedor, cod_cliente, quantidade," \
+                          "valor_total, ultupdate) VALUES (%s,%s,%s,%s,%s,%s,%s)"
             dados = nr_caixa, self.cod_prod, 1, codigo, self.qtd, self.valTot, dataAtual
             self.cursor.execute(comando_sql, dados)
-
             conexao.banco.commit()
-            self.cursor.close()
-
-        # self.cursor = conexao.banco.cursor()
-        # consulta_prod = "SELECT idproduto, estoque FROM estoque WHERE idproduto = " + self.cod
-        # self.cursor.execute(consulta_prod)
-        # result_prod = self.cursor.fetchall()
-        # for i in range(len(result_prod)):
-        #     print(result_prod[i])
-
-        # self.cursor = conexao.banco.cursor()
-        # consulta_prod = "CREATE TRIGGER tgr_itensVenda_insert AFTER INSERT" \
-        #                 "ON caixa" \
-        #                 "FOR EACH ROW" \
-        #                 "BEGIN" \
-        #                 "UPDATE estoque SET estoque = estoque - NEW.quantidade" \
-        #                 "WHERE id_produtos = idproduto"
-        # self.cursor.execute(consulta_prod)
-        # result_prod = self.cursor.fetchall()
-
 
         print('PEDIDO EFETIVADO')
 
