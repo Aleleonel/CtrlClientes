@@ -953,12 +953,6 @@ class SearchClientes(QDialog):
         except Exception:
             QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A pesquisa falhou!')
 
-        # finally:
-        #     if conexao.banco.is_connected():
-        #         conexao.banco.close()
-        #         self.cursor.close()
-        #         print("Conexão ao MySQL encerrada")
-
 
 class DeleteCliente(QDialog):
     """
@@ -1182,7 +1176,7 @@ class DataEntryForm(QWidget):
 
     def addCliente(self):
         entryItem = self.lineEditCliente.text()
-        print(entryItem[0::])
+        # print(entryItem[0::])
 
     def addProdutos(self):
 
@@ -1192,7 +1186,6 @@ class DataEntryForm(QWidget):
         result_prod = self.cursor.fetchall()
 
         entryItem = self.lineEditDescription.text()
-        print(entryItem[0::])
 
         for i in range(len(result_prod)):
             if result_prod[i][1] == entryItem:
@@ -1237,14 +1230,12 @@ class DataEntryForm(QWidget):
                 tot_format = ('R${0:.2f} '.format(float(self.ttotal)))
                 self.lbl_total.setText(str(tot_format))
 
-        sum(self.total)
         self.cod = self.codigo
         self.desc = self.lineEditDescription.text()
         self.qtd = int(self.lineEditQtd.text())
         self.price = float(self.lineEditPrice.text())
         self.sub_total = float(self.qtd * self.price)
         self.sub_ttotal = str(self.sub_total)
-        self.total.append(float(self.sub_total))
 
         try:
             codItem = QTableWidgetItem(str(self.cod))
@@ -1280,11 +1271,8 @@ class DataEntryForm(QWidget):
                     resultado = self.table.item(row, cabCol).text()
                     recebe = resultado.replace("R$", "0")
                     self.calculaitens.append(float(recebe))
-            print(self.calculaitens)
-
             self.items += 1
             self.ttotal = 0
-            # self.ttotal += sum(self.total)
             self.ttotal += sum(self.calculaitens)
             tot_format = ('R${0:.2f} '.format(float(self.ttotal)))
             self.lbl_total.setText(str(tot_format))
@@ -1315,12 +1303,7 @@ class DataEntryForm(QWidget):
         self.lineEditPrice.setText('')
         self.lbl_total.setText('R$ 0.00')
 
-    # def excluir_dados(self):
-    #     if self.table.rowCount() > 0:
-    #         self.table.removeRow(self.table.rowCount() - 1)
-    #         self.total.pop()
-
-    @QtCore.pyqtSlot()
+    # @QtCore.pyqtSlot()
     def excluir_dados(self):
         if self.table.rowCount() > 0:
             linha = self.table.currentRow()
@@ -1333,27 +1316,32 @@ class DataEntryForm(QWidget):
             self.calculaitens = []
             linha = self.table.rowCount()
             row = linha
-            while row > 0:
-                row -= 1
-                col = self.table.columnCount()
-                resultado = 0
-                for x in range(0, col, 1):
-                    self.headertext = self.table.horizontalHeaderItem(x).text()
-                    if self.headertext == 'Sub Total':
-                        cabCol = x
-                        resultado = self.table.item(row, cabCol).text()
-                        recebe = resultado.replace("R$", "0")
-                        self.calculaitens.append(float(recebe))
-
-                self.ttotal = 0
-                self.ttotal += sum(self.calculaitens)
-                tot_format = ('R${0:.2f} '.format(float(self.ttotal)))
-                self.lbl_total.setText(str(tot_format))
+            if row >0 :
+                while row > 0:
+                    row -= 1
+                    col = self.table.columnCount()
+                    resultado = 0
+                    for x in range(0, col, 1):
+                        self.headertext = self.table.horizontalHeaderItem(x).text()
+                        if self.headertext == 'Sub Total':
+                            cabCol = x
+                            resultado = self.table.item(row, cabCol).text()
+                            recebe = resultado.replace("R$", "0")
+                            self.calculaitens.append(float(recebe))
+                    self.ttotal = 0
+                    self.ttotal += sum(self.calculaitens)
+                    tot_format = ('R${0:.2f} '.format(float(self.ttotal)))
+                    self.lbl_total.setText(str(tot_format))
+            else:
+                self.lbl_total.setText('R$ 0.00')
         else:
             self.lbl_total.setText('R$ 0.00')
 
-
     def cupom(self):
+        """
+        precisa ser implementado ainda
+        :return:
+        """
         for i in range(self.table.rowCount()):
             cod = self.table.item(i, 0).text()
             text = self.table.item(i, 1).text()
@@ -1370,21 +1358,23 @@ class DataEntryForm(QWidget):
 
     def numeroPedido(self):
         d = QDate.currentDate()
-        data_anterior = str(d.addDays(-1).toString(Qt.ISODate))
+        data_ant
+        erior = str(d.addDays(-1).toString(Qt.ISODate))
         nr_caixa = 0
 
         self.cursor = conexao.banco.cursor()
-        comando_sql = "SELECT nr_caixa, ultupdate FROM caixa WHERE ultupdate ='{}' ".format(data_anterior)
+        comando_sql = "SELECT * FROM pedidocaixa "
         self.cursor.execute(comando_sql)
         result_data = self.cursor.fetchall()
 
-        datacaixa = result_data[0][1]
-        if datacaixa:
-            nr_caixa = result_data[0][0]
-            nr_caixa += 1
-        else:
-            nr_caixa = 1
-        return nr_caixa
+        print(result_data)
+        # datacaixa = result_data[0][7]
+        # if datacaixa == :
+        #     nr_caixa = result_data[1]
+        #     nr_caixa += 1
+        # else:
+        #     nr_caixa = 1
+        # return nr_caixa
 
     def codigoclientepedido(self):
         nome = self.lineEditCliente.text()
@@ -1399,8 +1389,8 @@ class DataEntryForm(QWidget):
 
         d = QDate.currentDate()
         dataAtual = d.toString(Qt.ISODate)
-        dataAtual = str(dataAtual)
 
+        dataAtual = str(dataAtual)
         nr_caixa = self.numeroPedido()
         codigo = self.codigoclientepedido()
 
