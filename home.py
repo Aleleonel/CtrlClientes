@@ -1471,7 +1471,6 @@ class DataEntryForm(QWidget):
             self.valTot = float(self.table.item(i, 4).text().replace('R$', ''))
 
             fechamento += self.valTot
-            print(fechamento)
 
             comando_sql = "INSERT INTO pedidocaixa (nr_caixa, cod_produto, cod_vendedor, cod_cliente, quantidade," \
                           "valor_total, ultupdate) VALUES (%s,%s,%s,%s,%s,%s,%s)"
@@ -1482,14 +1481,14 @@ class DataEntryForm(QWidget):
         dlg.exec()
         return
 
+
 class EfetivaPedidoCaixa(QDialog):
     def __init__(self, fechamento):
         super(EfetivaPedidoCaixa, self).__init__()
 
+        recebido = 0
         totaliza = ('${0:.2f}'.format(fechamento))
-        print("PEGUEI", totaliza)
-
-
+        totalizando = fechamento
 
         # Configurações do titulo da Janela
         self.setWindowTitle("RECEBER R$:")
@@ -1507,8 +1506,16 @@ class EfetivaPedidoCaixa(QDialog):
         # Insere o ramo ou tipo /
 
         self.precoinput = QLineEdit()
-        self.precoinput.setPlaceholderText("Valor recebido")
+        self.onlyFloat = QDoubleValidator()
+        self.precoinput.setValidator(self.onlyFloat)
+        self.precoinput.setPlaceholderText("Digite o valor recebido aqui - 'R$ 0.00'")
         layout.addWidget(self.precoinput)
+
+        self.lineEditPrice = QLineEdit()
+        self.onlyFloat = QDoubleValidator()
+        self.lineEditPrice.setValidator(self.onlyFloat)
+        self.lineEditPrice.setPlaceholderText('Desconto')
+        layout.addWidget(self.lineEditPrice)
 
         self.lbl_total = QLabel()
         self.lbl_total.setText(str(totaliza))
@@ -1518,14 +1525,21 @@ class EfetivaPedidoCaixa(QDialog):
         self.lbl_total.setStyleSheet("border-radius: 25px;border: 1px solid black;")
         layout.addWidget(self.lbl_total)
 
-        self.buttongerar = QPushButton("Receber", self)
-        self.buttongerar.setIcon(QIcon("Icones/dollars.png"))
-        self.buttongerar.setIconSize(QSize(40, 40))
-        self.buttongerar.setMinimumHeight(40)
+        self.buttonreceber = QPushButton("Receber", self)
+        self.buttonreceber.setIcon(QIcon("Icones/dollars.png"))
+        self.buttonreceber.setIconSize(QSize(40, 40))
+        self.buttonreceber.setMinimumHeight(40)
+        self.buttonreceber.clicked.connect(lambda: self.receber(totalizando))
 
-        layout.addWidget(self.buttongerar)
+        layout.addWidget(self.buttonreceber)
         self.setLayout(layout)
         self.show()
+
+    def receber(self, totalizando):
+
+        recebido = float(self.precoinput.text())
+        if recebido:
+            self.lbl_total.setText((str('R${0:.2f}'.format(recebido - totalizando))))
 
 
 class MainWindow(QMainWindow):
