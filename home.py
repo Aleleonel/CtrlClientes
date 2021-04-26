@@ -1457,6 +1457,8 @@ class DataEntryForm(QWidget):
         dataAtual = d.toString(Qt.ISODate)
         dataAtual = str(dataAtual)
 
+        global fechamento
+        fechamento = 0
         nr_caixa = self.numeroPedido()
         codigo = self.codigoclientepedido()
 
@@ -1468,23 +1470,26 @@ class DataEntryForm(QWidget):
             self.valUn = float(self.table.item(i, 3).text().replace('R$', ''))
             self.valTot = float(self.table.item(i, 4).text().replace('R$', ''))
 
+            fechamento += self.valTot
+            print(fechamento)
+
             comando_sql = "INSERT INTO pedidocaixa (nr_caixa, cod_produto, cod_vendedor, cod_cliente, quantidade," \
                           "valor_total, ultupdate) VALUES (%s,%s,%s,%s,%s,%s,%s)"
             dados = nr_caixa, self.cod_prod, 1, codigo, self.qtd, self.valTot, dataAtual
             self.cursor.execute(comando_sql, dados)
             conexao.banco.commit()
-
-        EfetivaPedidoCaixa()
-        dlg = EfetivaPedidoCaixa()
+        dlg = EfetivaPedidoCaixa(fechamento)
         dlg.exec()
-
+        return
 
 class EfetivaPedidoCaixa(QDialog):
-    def __init__(self):
+    def __init__(self, fechamento):
         super(EfetivaPedidoCaixa, self).__init__()
 
-        self.QBtn = QPushButton()
-        self.QBtn.setText("Registrar")
+        totaliza = ('${0:.2f}'.format(fechamento))
+        print("PEGUEI", totaliza)
+
+
 
         # Configurações do titulo da Janela
         self.setWindowTitle("RECEBER R$:")
@@ -1506,13 +1511,19 @@ class EfetivaPedidoCaixa(QDialog):
         layout.addWidget(self.precoinput)
 
         self.lbl_total = QLabel()
-        self.lbl_total.setText('R$ 0.00')
+        self.lbl_total.setText(str(totaliza))
+        # self.lbl_total.setText('R$ 0.00')
         self.lbl_total.setFont(QFont("Times", 42, QFont.Bold))
         self.lbl_total.setAlignment(Qt.AlignCenter)
-        # self.lbl_total.setStyleSheet("border-radius: 25px;border: 1px solid black;")
+        self.lbl_total.setStyleSheet("border-radius: 25px;border: 1px solid black;")
         layout.addWidget(self.lbl_total)
 
-        layout.addWidget(self.QBtn)
+        self.buttongerar = QPushButton("Receber", self)
+        self.buttongerar.setIcon(QIcon("Icones/dollars.png"))
+        self.buttongerar.setIconSize(QSize(40, 40))
+        self.buttongerar.setMinimumHeight(40)
+
+        layout.addWidget(self.buttongerar)
         self.setLayout(layout)
         self.show()
 
