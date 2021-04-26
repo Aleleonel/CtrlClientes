@@ -47,7 +47,7 @@ class AboutDialog(QDialog):
 
         # Configurações de atribuição de imagem
         labelpic = QLabel()
-        pixmap = QPixmap('Icones/perfil.png')
+        pixmap = QPixmap('../Icones/perfil.png')
         # pixmap = pixmap.scaledToWidth(400)
         pixmap = pixmap.scaled(QSize(500, 500))
         labelpic.setPixmap(pixmap)
@@ -162,10 +162,17 @@ class CadastroEstoque(QDialog):
 
         try:
             self.cursor = conexao.banco.cursor()
-            comando_sql = "INSERT INTO estoque (idproduto, estoque, status, preco_compra)" \
-                          "VALUES (%s, %s, %s, %s)"
-            dados = codigo, quantidade, status, preco
+            comando_sql = "INSERT INTO estoque (idproduto, estoque, status)" \
+                          "VALUES (%s, %s, %s)"
+            dados = codigo, quantidade, status
             self.cursor.execute(comando_sql, dados)
+            conexao.banco.commit()
+            self.cursor.close()
+
+            self.cursor = conexao.banco.cursor()
+            consulta_sql_preco = "INSERT INTO precos (idprecos, preco) VALUES (%s, %s)"
+            dados_preco = codigo, preco
+            self.cursor.execute(consulta_sql_preco, dados_preco)
             conexao.banco.commit()
             self.cursor.close()
 
@@ -175,6 +182,30 @@ class CadastroEstoque(QDialog):
         except Exception:
 
             QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A inserção falhou!')
+
+        self.cursor = conexao.banco.cursor()
+        consulta_sql_estoque = "SELECT idproduto, estoque FROM estoque WHERE idproduto =" + codigo
+        self.cursor.execute(consulta_sql_estoque)
+        dados_estoque = self.cursor.fetchall()
+
+        total_estoque = 0
+        soma = []
+        for i in range(len(dados_estoque)):
+            if dados_estoque[i][1]:
+                total_estoque = int(dados_estoque[i][1])
+                soma.append(total_estoque)
+        saldo = sum(soma)
+        print(sum(soma))
+        print(saldo)
+
+        # consulta_sql_saldo = "UPDATE itens_estoque a " \
+        #                      "SET a.total = %s" \
+        #                      "WHERE a.idprodutos = %s"
+        #
+        # dados = saldo, codigo
+        # self.cursor.execute(consulta_sql_saldo, dados)
+        # conexao.banco.commit()
+        # self.cursor.close()
 
 
 class ListEstoque(QMainWindow):
@@ -192,67 +223,24 @@ class ListEstoque(QMainWindow):
         # muda a cor da linha selecionada
         self.tableWidget.setAlternatingRowColors(True)
         # indica a quantidade de colunas
-        self.tableWidget.setColumnCount(6)
+        self.tableWidget.setColumnCount(5)
         # define que o cabeçalho não seja alterado
-        # self.tableWidget.horizontalHeader().setCascadingSectionResizes(False)
-        self.tableWidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        # self.tableWidget.horizontalHeader().setSortIndicatorShown(False)
-        self.tableWidget.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.tableWidget.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.tableWidget.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.tableWidget.horizontalHeader().setCascadingSectionResizes(False)
+        self.tableWidget.horizontalHeader().setSortIndicatorShown(False)
         # Estica conforme o conteudo da célula
-        # self.tableWidget.horizontalHeader().setStretchLastSection(True)
-        self.tableWidget.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        self.tableWidget.horizontalHeader().setStretchLastSection(True)
 
         self.tableWidget.verticalHeader().setVisible(False)
         self.tableWidget.verticalHeader().setCascadingSectionResizes(False)
         self.tableWidget.verticalHeader().setStretchLastSection(False)
         self.tableWidget.setHorizontalHeaderLabels(
-            ("Codigo", "Itens", "Entradas", "Saidas", "Saldo",))
-
-        # self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+            ("Codigo", "Descrição", "Preço de Compra", "Quantidade", "Atualização",))
 
         self.cursor = conexao.banco.cursor()
-        # comando_sql = "SELECT a.codigo, a.descricao, b.preco, e.estoque, e.ultupdate FROM controle_clientes.produtos" \
-        #               " as a" \
-        #               " LEFT JOIN controle_clientes.precos as b on b.idprecos = a.codigo" \
-        #               " LEFT JOIN controle_clientes.estoque as e ON e.idproduto = a.codigo;"
-
-        comando_sql = """
-                      select                       
-                        idproduto, 
-                        p.descricao,
-                        coalesce(
-                            (SELECT 
-                                sum(e.estoque) entrada 
-                             FROM estoque e 		
-                             where status = 'E' 
-                             and e.idproduto = i.idproduto), 0) entrada,  
-                        coalesce(
-                            (SELECT 
-                                sum(e.estoque) saida
-                             FROM estoque e 
-                             where status = 'S'
-                             and e.idproduto = i.idproduto), 0) saida,  
-                         
-                          coalesce(
-                              ((SELECT 
-                                 sum(e.estoque) entrada 
-                               FROM estoque e 		
-                               where status = 'E' 
-                               and e.idproduto = i.idproduto) -  
-                              (SELECT 
-                                 sum(e.estoque) saida
-                               FROM estoque e 
-                               where status = 'S'
-                               and e.idproduto = i.idproduto)), 0) estoque
-                    
-                      from
-                         estoque i
-                      inner join produtos p on p.codigo = i.idproduto    
-                      group by 
-                         idproduto
-        """
+        comando_sql = "SELECT a.codigo, a.descricao, b.preco, e.estoque, e.ultupdate FROM controle_clientes.produtos" \
+                      " as a" \
+                      " LEFT JOIN controle_clientes.precos as b on b.idprecos = a.codigo" \
+                      " LEFT JOIN controle_clientes.estoque as e ON e.idproduto = a.codigo;"
         self.cursor.execute(comando_sql)
         result = self.cursor.fetchall()
 
@@ -271,61 +259,35 @@ class ListEstoque(QMainWindow):
         self.setStatusBar(statusbar)
 
         # botões do menu
-        btn_ac_adduser = QAction(QIcon("Icones/add.png"), "Cadastro Estoque", self)
+        btn_ac_adduser = QAction(QIcon("../Icones/add.png"), "Cadastro Estoque morto", self)
         btn_ac_adduser.triggered.connect(self.cadEstoque)
         btn_ac_adduser.setStatusTip("Clientes")
         toolbar.addAction(btn_ac_adduser)
 
-        btn_ac_refresch = QAction(QIcon("Icones/atualizar.png"), "Atualizar dados do Estoque", self)
+        btn_ac_refresch = QAction(QIcon("../Icones/atualizar.png"), "Atualizar dados do Cliente", self)
         btn_ac_refresch.triggered.connect(self.loaddata)
         btn_ac_refresch.setStatusTip("Atualizar")
         toolbar.addAction(btn_ac_refresch)
 
-        btn_ac_search = QAction(QIcon("Icones/pesquisa.png"), "Pesquisar Produtos em Estoque", self)
+        btn_ac_search = QAction(QIcon("../Icones/pesquisa.png"), "Pesquisar dados por Cliente", self)
         btn_ac_search.triggered.connect(self.search)
         btn_ac_search.setStatusTip("Pesquisar")
         toolbar.addAction(btn_ac_search)
+
+        btn_ac_delete = QAction(QIcon("../Icones/deletar.png"), "Deletar o Cliente", self)
+        # btn_ac_delete.triggered.connect(self.delete)
+        btn_ac_delete.setStatusTip("Deletar ")
+        toolbar.addAction(btn_ac_delete)
 
         self.show()
 
     def loaddata(self):
 
         self.cursor = conexao.banco.cursor()
-        comando_sql = """
-                             select                       
-                               idproduto, 
-                               p.descricao, 
-                               coalesce(
-                                   (SELECT 
-                                       sum(e.estoque) entrada 
-                                    FROM estoque e 		
-                                    where status = 'E' 
-                                    and e.idproduto = i.idproduto), 0) entrada,  
-                               coalesce(
-                                   (SELECT 
-                                       sum(e.estoque) saida
-                                    FROM estoque e 
-                                    where status = 'S'
-                                    and e.idproduto = i.idproduto), 0) saida,  
-
-                                 coalesce(
-                                     ((SELECT 
-                                        sum(e.estoque) entrada 
-                                      FROM estoque e 		
-                                      where status = 'E' 
-                                      and e.idproduto = i.idproduto) -  
-                                     (SELECT 
-                                        sum(e.estoque) saida
-                                      FROM estoque e 
-                                      where status = 'S'
-                                      and e.idproduto = i.idproduto)), 0) estoque
-
-                             from
-                                estoque i
-                             inner join produtos p on p.codigo = i.idproduto    
-                             group by 
-                                idproduto
-               """
+        comando_sql = "SELECT a.codigo, a.descricao, b.preco, e.estoque, e.ultupdate FROM controle_clientes.produtos" \
+                      " as a" \
+                      " LEFT JOIN controle_clientes.precos as b on b.idprecos = a.codigo" \
+                      " LEFT JOIN controle_clientes.estoque as e ON e.idproduto = a.codigo;"
         self.cursor.execute(comando_sql)
         result = self.cursor.fetchall()
 
@@ -344,6 +306,10 @@ class ListEstoque(QMainWindow):
     def search(self):
         dlg = SearchEstoque()
         dlg.exec_()
+
+    # def delete(self):
+    #     dlg = DeleteEstoque()
+    #     dlg.exec_()
 
 
 class SearchEstoque(QDialog):
@@ -630,11 +596,42 @@ class CadastroProdutos(QDialog):
 
             QMessageBox.warning(QMessageBox(), 'aleleonel@gmail.com', 'A inserção falhou!')
 
+        self.cursor = conexao.banco.cursor()
+        consulta_prod = "SELECT * FROM produtos"
+        self.cursor.execute(consulta_prod)
+        result_prod = self.cursor.fetchall()
+
+        itens_codigo = 0
+        for i in range(len(result_prod)):
+            itens_codigo = result_prod[i][0]
+
+        print(itens_codigo)
+        total = 0
+        total_estoque = 0
+
+        self.cursor = conexao.banco.cursor()
+        comando_sql_itens = "INSERT INTO itens_estoque (idprodutos, total, total_estoque) VALUES (%s, %s, %s)"
+        dados = itens_codigo, total, total_estoque
+        self.cursor.execute(comando_sql_itens, dados)
+        conexao.banco.commit()
+        self.cursor.close()
+
 
 class ListProdutos(QMainWindow):
     def __init__(self):
         super(ListProdutos, self).__init__()
-        self.setWindowIcon(QIcon('Icones/produtos2.png'))
+        self.setWindowIcon(QIcon('../Icones/produtos2.png'))
+
+        # cria banco de dados se ele não existir
+        self.cursor = conexao.banco.cursor()
+        self.comando_sql = "CREATE TABLE IF NOT EXISTS produtos(\
+                                    codigo INT PRIMARY KEY AUTO_INCREMENT,\
+                                    descricao VARCHAR(60),\
+                                    ncm VARCHAR(20),\
+                                    un VARCHAR(2),\
+                                    preco FLOAT)"
+        self.cursor.execute(self.comando_sql)
+        self.cursor.close()
 
         self.setWindowTitle("SCC - SISTEMA DE CONTROLE DE PRODUTOS")
         self.setMinimumSize(800, 600)
@@ -657,21 +654,13 @@ class ListProdutos(QMainWindow):
         self.tableWidget.verticalHeader().setVisible(False)
         self.tableWidget.verticalHeader().setCascadingSectionResizes(False)
         self.tableWidget.verticalHeader().setStretchLastSection(False)
-        self.tableWidget.setHorizontalHeaderLabels(("Codigo", "Descrição", "NCM", "UN", "Preço Compra", "Preço Venda",))
+        self.tableWidget.setHorizontalHeaderLabels(("Codigo", "Descrição", "NCM", "UN", "Preço", "Estoque",))
 
         self.cursor = conexao.banco.cursor()
-        comando_sql = """
-                        SELECT a.codigo, a.descricao, a.ncm, a.un, b.preco, a.preco 
-                        FROM controle_clientes.produtos as a   
-                        LEFT JOIN controle_clientes.precos as b
-                        ON b.idprecos = a.codigo;
-                        """
-
-        # comando_sql = "SELECT a.codigo, a.descricao, a.ncm, a.un, a.preco, e.estoque FROM " \
-        #               "controle_clientes.produtos " \
-        #               "as a LEFT JOIN controle_clientes.precos as b on b.idprecos = a.codigo LEFT JOIN " \
-        #               "controle_clientes.estoque as e ON e.idproduto = a.codigo; "
-
+        comando_sql = "SELECT a.codigo, a.descricao, a.ncm, a.un, a.preco, e.estoque FROM " \
+                      "controle_clientes.produtos " \
+                      "as a LEFT JOIN controle_clientes.precos as b on b.idprecos = a.codigo LEFT JOIN " \
+                      "controle_clientes.estoque as e ON e.idproduto = a.codigo; "
         self.cursor.execute(comando_sql)
         result = self.cursor.fetchall()
 
@@ -690,22 +679,22 @@ class ListProdutos(QMainWindow):
         self.setStatusBar(statusbar)
 
         # botões do menu
-        btn_ac_adduser = QAction(QIcon("Icones/add.png"), "Add Produto", self)
+        btn_ac_adduser = QAction(QIcon("../Icones/add.png"), "Add Produto", self)
         btn_ac_adduser.triggered.connect(self.cadProdutos)
         btn_ac_adduser.setStatusTip("Add Produto")
         toolbar.addAction(btn_ac_adduser)
 
-        btn_ac_refresch = QAction(QIcon("Icones/atualizar.png"), "Atualizar dados do produto", self)
+        btn_ac_refresch = QAction(QIcon("../Icones/atualizar.png"), "Atualizar dados do produto", self)
         btn_ac_refresch.triggered.connect(self.loaddata)
         btn_ac_refresch.setStatusTip("Atualizar")
         toolbar.addAction(btn_ac_refresch)
 
-        btn_ac_delete = QAction(QIcon("Icones/deletar.png"), "Deletar o Produto", self)
+        btn_ac_delete = QAction(QIcon("../Icones/deletar.png"), "Deletar o Produto", self)
         btn_ac_delete.triggered.connect(self.delete)
         btn_ac_delete.setStatusTip("Deletar ")
         toolbar.addAction(btn_ac_delete)
 
-        btn_ac_search = QAction(QIcon("Icones/pesquisa.png"), "Pesquisar dados por produto", self)
+        btn_ac_search = QAction(QIcon("../Icones/pesquisa.png"), "Pesquisar dados por produto", self)
         btn_ac_search.triggered.connect(self.search)
         btn_ac_search.setStatusTip("Pesquisar")
         toolbar.addAction(btn_ac_search)
@@ -715,17 +704,10 @@ class ListProdutos(QMainWindow):
     def loaddata(self):
 
         self.cursor = conexao.banco.cursor()
-        # comando_sql = "SELECT a.codigo, a.descricao, a.ncm, a.un, a.preco, e.estoque FROM " \
-        #               "controle_clientes.produtos " \
-        #               "as a LEFT JOIN controle_clientes.precos as b on b.idprecos = a.codigo LEFT JOIN " \
-        #               "controle_clientes.estoque as e ON e.idproduto = a.codigo; "
-
-        comando_sql = """
-                                SELECT a.codigo, a.descricao, a.ncm, a.un, b.preco, a.preco 
-                                FROM controle_clientes.produtos as a   
-                                LEFT JOIN controle_clientes.precos as b
-                                ON b.idprecos = a.codigo;
-                                """
+        comando_sql = "SELECT a.codigo, a.descricao, a.ncm, a.un, a.preco, e.estoque FROM " \
+                      "controle_clientes.produtos " \
+                      "as a LEFT JOIN controle_clientes.precos as b on b.idprecos = a.codigo LEFT JOIN " \
+                      "controle_clientes.estoque as e ON e.idproduto = a.codigo; "
         self.cursor.execute(comando_sql)
         result = self.cursor.fetchall()
 
@@ -908,27 +890,27 @@ class ListClientes(QMainWindow):
         self.setStatusBar(statusbar)
 
         # botões do menu
-        btn_ac_adduser = QAction(QIcon("Icones/add.png"), "Cadastro de Cliente", self)
+        btn_ac_adduser = QAction(QIcon("../Icones/add.png"), "Cadastro de Cliente", self)
         btn_ac_adduser.triggered.connect(self.cadClientes)
         btn_ac_adduser.setStatusTip("Clientes")
         toolbar.addAction(btn_ac_adduser)
 
-        btn_ac_refresch = QAction(QIcon("Icones/atualizar.png"), "Atualizar dados do Cliente", self)
+        btn_ac_refresch = QAction(QIcon("../Icones/atualizar.png"), "Atualizar dados do Cliente", self)
         btn_ac_refresch.triggered.connect(self.loaddata)
         btn_ac_refresch.setStatusTip("Atualizar")
         toolbar.addAction(btn_ac_refresch)
 
-        btn_ac_search = QAction(QIcon("Icones/pesquisa.png"), "Pesquisar dados por Cliente", self)
+        btn_ac_search = QAction(QIcon("../Icones/pesquisa.png"), "Pesquisar dados por Cliente", self)
         btn_ac_search.triggered.connect(self.search)
         btn_ac_search.setStatusTip("Pesquisar")
         toolbar.addAction(btn_ac_search)
 
-        btn_ac_delete = QAction(QIcon("Icones/deletar.png"), "Deletar o Cliente", self)
+        btn_ac_delete = QAction(QIcon("../Icones/deletar.png"), "Deletar o Cliente", self)
         btn_ac_delete.triggered.connect(self.delete)
         btn_ac_delete.setStatusTip("Deletar ")
         toolbar.addAction(btn_ac_delete)
 
-        btn_ac_sair = QAction(QIcon("Icones/sair.png"), "Sair", self)
+        btn_ac_sair = QAction(QIcon("../Icones/sair.png"), "Sair", self)
         # btn_ac_sair.triggered.connect(self.fechaTela)
         btn_ac_sair.setStatusTip("Sair ")
         toolbar.addAction(btn_ac_sair)
@@ -1185,33 +1167,33 @@ class DataEntryForm(QWidget):
         # self.lbl_total.setStyleSheet("border-radius: 25px;border: 1px solid black;")
         self.layoutRight.addWidget(self.lbl_total)
 
-        self.buttonAdd = QPushButton("Add.", self)
-        self.buttonAdd.setIcon(QIcon("Icones/add.png"))
+        self.buttonAdd = QPushButton("Adicionar", self)
+        self.buttonAdd.setIcon(QIcon("../Icones/add.png"))
         self.buttonAdd.setIconSize(QSize(40, 40))
         self.buttonAdd.setMinimumHeight(40)
 
-        self.buttonClear = QPushButton("Canc.", self)
-        self.buttonClear.setIcon(QIcon("Icones/clear.png"))
+        self.buttonClear = QPushButton("Cancelar", self)
+        self.buttonClear.setIcon(QIcon("../Icones/clear.png"))
         self.buttonClear.setIconSize(QSize(40, 40))
         self.buttonClear.setMinimumHeight(40)
 
-        self.buttonClearOne = QPushButton("Rem.", self)
-        self.buttonClearOne.setIcon(QIcon("Icones/clear.png"))
+        self.buttonClearOne = QPushButton("Remove", self)
+        self.buttonClearOne.setIcon(QIcon("../Icones/clear.png"))
         self.buttonClearOne.setIconSize(QSize(40, 40))
         self.buttonClearOne.setMinimumHeight(40)
 
-        self.buttongerar = QPushButton("Gerar", self)
-        self.buttongerar.setIcon(QIcon("Icones/dollars.png"))
-        self.buttongerar.setIconSize(QSize(40, 40))
-        self.buttongerar.setMinimumHeight(40)
+        self.buttonefetivar = QPushButton("Efetivar", self)
+        self.buttonefetivar.setIcon(QIcon("../Icones/dollars.png"))
+        self.buttonefetivar.setIconSize(QSize(40, 40))
+        self.buttonefetivar.setMinimumHeight(40)
 
         self.butotnCupon = QPushButton("Cupon", self)
-        self.butotnCupon.setIcon(QIcon("Icones/impressora.png"))
+        self.butotnCupon.setIcon(QIcon("../Icones/impressora.png"))
         self.butotnCupon.setIconSize(QSize(40, 40))
         self.butotnCupon.setMinimumHeight(40)
 
-        self.buttonQuit = QPushButton("Sair  ", self)
-        self.buttonQuit.setIcon(QIcon("Icones/sair.png"))
+        self.buttonQuit = QPushButton("Sair", self)
+        self.buttonQuit.setIcon(QIcon("../Icones/sair.png"))
         self.buttonQuit.setIconSize(QSize(40, 40))
         self.buttonQuit.setMinimumHeight(40)
 
@@ -1219,7 +1201,7 @@ class DataEntryForm(QWidget):
 
         self.layoutRight.addWidget(self.buttonAdd)
         self.layoutRight.addWidget(self.butotnCupon)
-        self.layoutRight.addWidget(self.buttongerar)
+        self.layoutRight.addWidget(self.buttonefetivar)
         self.layoutRight.addWidget(self.buttonClear)
         self.layoutRight.addWidget(self.buttonClearOne)
         self.layoutRight.addWidget(self.buttonQuit)
@@ -1234,7 +1216,7 @@ class DataEntryForm(QWidget):
         self.buttonClear.clicked.connect(self.reset_table)
         self.buttonClearOne.clicked.connect(self.excluir_dados)
         self.butotnCupon.clicked.connect(self.cupom)
-        self.buttongerar.clicked.connect(self.gerar)
+        self.buttonefetivar.clicked.connect(self.efetiva)
         self.buttonAdd.clicked.connect(self.add_entry)
 
         self.lineEditDescription.textChanged[str].connect(self.check_disable)
@@ -1433,14 +1415,15 @@ class DataEntryForm(QWidget):
         comando_sql = "SELECT * FROM pedidocaixa "
         self.cursor.execute(comando_sql)
         result_data = self.cursor.fetchall()
-        for i in range(len(result_data)):
-            print(result_data[i][7])
-            datacaixa = result_data[0][6]
-            if datacaixa == '':
-                nr_caixa = 1
-            else:
-                nr_caixa += 1
-            return nr_caixa
+
+        print(result_data)
+        # datacaixa = result_data[0][7]
+        # if datacaixa == :
+        #     nr_caixa = result_data[1]
+        #     nr_caixa += 1
+        # else:
+        #     nr_caixa = 1
+        # return nr_caixa
 
     def codigoclientepedido(self):
         nome = self.lineEditCliente.text()
@@ -1451,12 +1434,12 @@ class DataEntryForm(QWidget):
         codigo = cod_cli[0][0]
         return codigo
 
-    def gerar(self):
+    def efetiva(self):
 
         d = QDate.currentDate()
         dataAtual = d.toString(Qt.ISODate)
-        dataAtual = str(dataAtual)
 
+        dataAtual = str(dataAtual)
         nr_caixa = self.numeroPedido()
         codigo = self.codigoclientepedido()
 
@@ -1474,53 +1457,13 @@ class DataEntryForm(QWidget):
             self.cursor.execute(comando_sql, dados)
             conexao.banco.commit()
 
-        EfetivaPedidoCaixa()
-        dlg = EfetivaPedidoCaixa()
-        dlg.exec()
-
-
-class EfetivaPedidoCaixa(QDialog):
-    def __init__(self):
-        super(EfetivaPedidoCaixa, self).__init__()
-
-        self.QBtn = QPushButton()
-        self.QBtn.setText("Registrar")
-
-        # Configurações do titulo da Janela
-        self.setWindowTitle("RECEBER R$:")
-        self.setFixedWidth(300)
-        self.setFixedHeight(300)
-
-        layout = QVBoxLayout()
-        self.lbl_finaliza = QLabel()
-        self.lbl_finaliza.setText('FINALIZA PEDIDO')
-        self.lbl_finaliza.setFont(QFont("Times", 12, QFont.Bold))
-        self.lbl_finaliza.setAlignment(Qt.AlignCenter)
-        # self.lbl_total.setStyleSheet("border-radius: 25px;border: 1px solid black;")
-        layout.addWidget(self.lbl_finaliza)
-
-        # Insere o ramo ou tipo /
-
-        self.precoinput = QLineEdit()
-        self.precoinput.setPlaceholderText("Valor recebido")
-        layout.addWidget(self.precoinput)
-
-        self.lbl_total = QLabel()
-        self.lbl_total.setText('R$ 0.00')
-        self.lbl_total.setFont(QFont("Times", 42, QFont.Bold))
-        self.lbl_total.setAlignment(Qt.AlignCenter)
-        # self.lbl_total.setStyleSheet("border-radius: 25px;border: 1px solid black;")
-        layout.addWidget(self.lbl_total)
-
-        layout.addWidget(self.QBtn)
-        self.setLayout(layout)
-        self.show()
+        print('PEDIDO EFETIVADO')
 
 
 class MainWindow(QMainWindow):
     def __init__(self, w):
         super(MainWindow, self).__init__()
-        self.setWindowIcon(QIcon('Icones/perfil.png'))
+        self.setWindowIcon(QIcon('../Icones/perfil.png'))
 
         # cria um menu
         file_menu = self.menuBar().addMenu("&Arquivo")
@@ -1538,54 +1481,54 @@ class MainWindow(QMainWindow):
         self.setStatusBar(statusbar)
 
         # botões do menu
-        btn_ac_adduser = QAction(QIcon("Icones/clientes.png"), "Listar/Cadastrar de Cliente", self)
+        btn_ac_adduser = QAction(QIcon("../Icones/clientes.png"), "Listar/Cadastrar de Cliente", self)
         btn_ac_adduser.triggered.connect(self.listClientes)
         btn_ac_adduser.setStatusTip("Clientes")
         toolbar.addAction(btn_ac_adduser)
 
-        btn_ac_produto = QAction(QIcon("Icones/produtos2.png"), "Lista/Cadastrar Produtos", self)
+        btn_ac_produto = QAction(QIcon("../Icones/produtos2.png"), "Lista/Cadastrar Produtos", self)
         btn_ac_produto.triggered.connect(self.listProdutos)
         btn_ac_produto.setStatusTip("Produtos")
         toolbar.addAction(btn_ac_produto)
 
-        btn_ac_estoque = QAction(QIcon("Icones/estoque.png"), "Lista/Cadastro Estoque", self)
+        btn_ac_estoque = QAction(QIcon("../Icones/estoque.png"), "Lista/Cadastro Estoque", self)
         btn_ac_estoque.triggered.connect(self.listEstoque)
         btn_ac_estoque.setStatusTip("Estoque")
         toolbar.addAction(btn_ac_estoque)
 
-        btn_ac_caixa = QAction(QIcon("Icones/dollars.png"), "Caixa - abre o Caixa", self)
+        btn_ac_caixa = QAction(QIcon("../Icones/dollars.png"), "Caixa - abre o Caixa", self)
         btn_ac_caixa.triggered.connect(self.caixa)
         btn_ac_caixa.setStatusTip("Caixa")
         toolbar.addAction(btn_ac_caixa)
 
-        btn_ac_fechar = QAction(QIcon("Icones/sair.png"), "Sair", self)
+        btn_ac_fechar = QAction(QIcon("../Icones/sair.png"), "Sair", self)
         btn_ac_fechar.triggered.connect(self.fechaTela)
         btn_ac_fechar.setStatusTip("Sair")
         toolbar.addAction(btn_ac_fechar)
 
         # Arquivo >> Adicionar
-        adduser_action = QAction(QIcon("Icones/clientes.png"), "Listar/Cadastrar de Cliente", self)
+        adduser_action = QAction(QIcon("../Icones/clientes.png"), "Listar/Cadastrar de Cliente", self)
         adduser_action.triggered.connect(self.listClientes)
         file_menu.addAction(adduser_action)
 
-        btn_ac_produto = QAction(QIcon("Icones/produtos2.png"), "Listar/Cadastrar Produtos", self)
+        btn_ac_produto = QAction(QIcon("../Icones/produtos2.png"), "Listar/Cadastrar Produtos", self)
         btn_ac_produto.triggered.connect(self.listProdutos)
         file_menu.addAction(btn_ac_produto)
 
-        btn_ac_estoque = QAction(QIcon("Icones/estoque.png"), "Lista/Cadastro Estoque", self)
+        btn_ac_estoque = QAction(QIcon("../Icones/estoque.png"), "Lista/Cadastro Estoque", self)
         btn_ac_estoque.triggered.connect(self.listEstoque)
         file_menu.addAction(btn_ac_estoque)
 
-        btn_ac_caixa = QAction(QIcon("Icones/dollars.png"), "Caixa", self)
+        btn_ac_caixa = QAction(QIcon("../Icones/dollars.png"), "Caixa", self)
         btn_ac_caixa.triggered.connect(self.caixa)
         file_menu.addAction(btn_ac_caixa)
 
-        btn_ac_fechar = QAction(QIcon("Icones/sair.png"), "Sair", self)
+        btn_ac_fechar = QAction(QIcon("../Icones/sair.png"), "Sair", self)
         btn_ac_fechar.setShortcut('Ctrl+Q')
         btn_ac_fechar.triggered.connect(self.fechaTela)
         file_menu.addAction(btn_ac_fechar)
 
-        about_action = QAction(QIcon("Icones/sobre-nos.png"), "Desenvolvedores", self)
+        about_action = QAction(QIcon("../Icones/sobre-nos.png"), "Desenvolvedores", self)
         about_action.triggered.connect(self.about)
         help_menu.addAction(about_action)
 
@@ -1630,7 +1573,7 @@ class MainWindow(QMainWindow):
 
     def export_to_csv(self, w):
         try:
-            with open('sql/Expense Report.csv', 'w', newline='') as file:
+            with open('../sql/Expense Report.csv', 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow((w.table.horizontalHeaderItem(0).text(), w.table.horizontalHeaderItem(1).text()))
                 for rowNumber in range(w.table.rowCount()):
