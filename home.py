@@ -1189,33 +1189,36 @@ class DataEntryForm(QWidget):
         self.buttonAdd.setIcon(QIcon("Icones/add.png"))
         self.buttonAdd.setIconSize(QSize(40, 40))
         self.buttonAdd.setMinimumHeight(40)
+        self.buttonAdd.setEnabled(False)
 
         self.buttonClear = QPushButton("Canc.", self)
         self.buttonClear.setIcon(QIcon("Icones/clear.png"))
         self.buttonClear.setIconSize(QSize(40, 40))
         self.buttonClear.setMinimumHeight(40)
+        # self.buttonClear.setEnabled(False)
 
         self.buttonClearOne = QPushButton("Rem.", self)
         self.buttonClearOne.setIcon(QIcon("Icones/clear.png"))
         self.buttonClearOne.setIconSize(QSize(40, 40))
         self.buttonClearOne.setMinimumHeight(40)
+        # self.buttonClearOne.setEnabled(False)
 
         self.buttongerar = QPushButton("Gerar", self)
         self.buttongerar.setIcon(QIcon("Icones/dollars.png"))
         self.buttongerar.setIconSize(QSize(40, 40))
         self.buttongerar.setMinimumHeight(40)
+        self.buttongerar.setEnabled(False)
 
         self.butotnCupon = QPushButton("Cupon", self)
         self.butotnCupon.setIcon(QIcon("Icones/impressora.png"))
         self.butotnCupon.setIconSize(QSize(40, 40))
         self.butotnCupon.setMinimumHeight(40)
+        # self.butotnCupon.setEnabled(False)
 
         self.buttonQuit = QPushButton("Sair  ", self)
         self.buttonQuit.setIcon(QIcon("Icones/sair.png"))
         self.buttonQuit.setIconSize(QSize(40, 40))
         self.buttonQuit.setMinimumHeight(40)
-
-        self.buttonAdd.setEnabled(False)
 
         self.layoutRight.addWidget(self.buttonAdd)
         self.layoutRight.addWidget(self.butotnCupon)
@@ -1277,6 +1280,7 @@ class DataEntryForm(QWidget):
 
     def add_entry(self):
         self.sub_total = 0
+        self.buttongerar.setEnabled(True)
         if self.table.rowCount() > 0:
             self.calculaitens = []
             linha = self.table.rowCount()
@@ -1353,9 +1357,12 @@ class DataEntryForm(QWidget):
 
     def check_disable(self):
         if self.lineEditDescription.text() and self.lineEditPrice.text():
+            self.lineEditQtd.setText("1")
             self.buttonAdd.setEnabled(True)
+            self.buttongerar.setEnabled(False)
         else:
             self.buttonAdd.setEnabled(False)
+            # self.buttongerar.setEnabled(False)
 
     def reset_table(self):
         self.table.setRowCount(0)
@@ -1370,9 +1377,11 @@ class DataEntryForm(QWidget):
         self.lineEditQtd.setText('')
         self.lineEditPrice.setText('')
         self.lbl_total.setText('R$ 0.00')
+        self.buttongerar.setEnabled(False)
 
     # @QtCore.pyqtSlot()
     def excluir_dados(self):
+        self.buttongerar.setEnabled(False)
         if self.table.rowCount() > 0:
             linha = self.table.currentRow()
             self.table.removeRow(linha)
@@ -1434,13 +1443,12 @@ class DataEntryForm(QWidget):
         self.cursor.execute(comando_sql)
         result_data = self.cursor.fetchall()
         for i in range(len(result_data)):
-            print(result_data[i][7])
-            datacaixa = result_data[0][6]
-            if datacaixa == '':
-                nr_caixa = 1
+            print(result_data[i][1])
+            if nr_caixa == result_data[i][1]:
+                nr_caixa += 1
             else:
                 nr_caixa += 1
-            return nr_caixa
+        return nr_caixa
 
     def codigoclientepedido(self):
         nome = self.lineEditCliente.text()
@@ -1477,23 +1485,22 @@ class DataEntryForm(QWidget):
             dados = nr_caixa, self.cod_prod, 1, codigo, self.qtd, self.valTot, dataAtual
             self.cursor.execute(comando_sql, dados)
             conexao.banco.commit()
-        dlg = EfetivaPedidoCaixa(fechamento)
+        dlg = EfetivaPedidoCaixa(fechamento, nr_caixa)
         dlg.exec()
         return
 
 
 class EfetivaPedidoCaixa(QDialog):
-    def __init__(self, fechamento):
+    def __init__(self, fechamento, nr_caixa):
         super(EfetivaPedidoCaixa, self).__init__()
 
-        recebido = 0
         totaliza = ('${0:.2f}'.format(fechamento))
-        totalizando = fechamento
+        n_caixa = nr_caixa
 
         # Configurações do titulo da Janela
         self.setWindowTitle("RECEBER R$:")
-        self.setFixedWidth(300)
-        self.setFixedHeight(300)
+        self.setFixedWidth(600)
+        self.setFixedHeight(600)
 
         layout = QVBoxLayout()
         self.lbl_finaliza = QLabel()
@@ -1509,37 +1516,100 @@ class EfetivaPedidoCaixa(QDialog):
         self.onlyFloat = QDoubleValidator()
         self.precoinput.setValidator(self.onlyFloat)
         self.precoinput.setPlaceholderText("Digite o valor recebido aqui - 'R$ 0.00'")
+        self.precoinput.textChanged[str].connect(self.check_disable)
         layout.addWidget(self.precoinput)
 
-        self.lineEditPrice = QLineEdit()
-        self.onlyFloat = QDoubleValidator()
-        self.lineEditPrice.setValidator(self.onlyFloat)
-        self.lineEditPrice.setPlaceholderText('Desconto')
-        layout.addWidget(self.lineEditPrice)
+        # self.lineEditdesconto = QLineEdit()
+        # self.onlyFloat = QDoubleValidator()
+        # self.lineEditdesconto.setValidator(self.onlyFloat)
+        # self.lineEditdesconto.setPlaceholderText('Desconto')
+        # layout.addWidget(self.lineEditdesconto)
 
         self.lbl_total = QLabel()
         self.lbl_total.setText(str(totaliza))
-        # self.lbl_total.setText('R$ 0.00')
         self.lbl_total.setFont(QFont("Times", 42, QFont.Bold))
         self.lbl_total.setAlignment(Qt.AlignCenter)
         self.lbl_total.setStyleSheet("border-radius: 25px;border: 1px solid black;")
         layout.addWidget(self.lbl_total)
+
+        # self.lbl_total_desc = QLabel()
+        # self.lbl_total_desc.setText(str(totaliza))
+        # # self.lbl_total.setText('R$ 0.00')
+        # self.lbl_total_desc.setFont(QFont("Times", 42, QFont.Bold))
+        # self.lbl_total_desc.setAlignment(Qt.AlignCenter)
+        # self.lbl_total_desc.setStyleSheet("border-radius: 25px;border: 1px solid black;")
+        # layout.addWidget(self.lbl_total_desc)
+
+        self.lbl_troco = QLabel()
+        # self.lbl_troco.setText(str(totaliza))
+        self.lbl_troco.setText('R$ 0.00')
+        self.lbl_troco.setFont(QFont("Times", 42, QFont.Bold))
+        self.lbl_troco.setAlignment(Qt.AlignCenter)
+        self.lbl_troco.setStyleSheet("border-radius: 25px;border: 1px solid black;")
+        layout.addWidget(self.lbl_troco)
 
         self.buttonreceber = QPushButton("Receber", self)
         self.buttonreceber.setIcon(QIcon("Icones/dollars.png"))
         self.buttonreceber.setIconSize(QSize(40, 40))
         self.buttonreceber.setMinimumHeight(40)
         self.buttonreceber.clicked.connect(lambda: self.receber(totalizando))
-
+        self.buttonreceber.setEnabled(False)
         layout.addWidget(self.buttonreceber)
+
+        self.butotnCupon = QPushButton("Cupon", self)
+        self.butotnCupon.setIcon(QIcon("Icones/impressora.png"))
+        self.butotnCupon.setIconSize(QSize(40, 40))
+        self.butotnCupon.setMinimumHeight(40)
+        # self.buttoncupon.clicked.connect(self.cupon)
+        layout.addWidget(self.butotnCupon)
+
+        self.buttonfinalizar = QPushButton("Finalizar", self)
+        self.buttonfinalizar.setIcon(QIcon("Icones/carrinho.png"))
+        self.buttonfinalizar.setIconSize(QSize(40, 40))
+        self.buttonfinalizar.setMinimumHeight(40)
+        self.buttonfinalizar.clicked.connect(lambda: self.finalizar(n_caixa))
+        layout.addWidget(self.buttonfinalizar)
+
+        recebido = 0
+
+        totalizando = fechamento
+
         self.setLayout(layout)
         self.show()
 
     def receber(self, totalizando):
 
         recebido = float(self.precoinput.text())
-        if recebido:
-            self.lbl_total.setText((str('R${0:.2f}'.format(recebido - totalizando))))
+        self.lbl_total.setText((str('Total = R$ {0:.2f}'.format(totalizando))))
+        troco = (recebido - totalizando)
+        self.lbl_troco.setText((str('Troco = R$ {0:.2f}'.format(troco))))
+
+    def check_disable(self):
+        if self.precoinput.text():
+            self.buttonreceber.setEnabled(True)
+        else:
+            self.buttonreceber.setEnabled(False)
+
+    def finalizar(self, n_caixa):
+
+
+        replay = QMessageBox.question(self, 'Window close', 'Tem certeza de que deseja finalizar a compra?',
+                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if replay == QMessageBox.Yes:
+
+            self.cursor = conexao.banco.cursor()
+            comando_sql = "INSERT INTO estoque " \
+                          "(idproduto, estoque, status, preco_compra)" \
+                          "SELECT cod_produto, quantidade,'S', 0 " \
+                          "FROM pedidocaixa as pc  " \
+                          "WHERE  pc.nr_caixa =" + str(n_caixa)
+            self.cursor.execute(comando_sql)
+            conexao.banco.commit()
+            self.hide()
+            dlg = telaprincipal()
+            dlg.exec()
+        else:
+            pass
 
 
 class MainWindow(QMainWindow):
@@ -1620,8 +1690,8 @@ class MainWindow(QMainWindow):
         export_Action.triggered.connect(self.export_to_csv)
         file_menu.addAction(export_Action)
 
-        self.show()
-        # self.showFullScreen()
+        # self.show()
+        self.showFullScreen()
 
     def about(self):
         dlg = AboutDialog()
