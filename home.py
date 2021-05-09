@@ -13,6 +13,7 @@ import csv
 
 import mysql.connector
 from mysql.connector import OperationalError
+from prettytable import PrettyTable, PLAIN_COLUMNS
 from reportlab.pdfgen import canvas
 
 import conexao
@@ -1572,9 +1573,15 @@ class EfetivaPedidoCaixa(QDialog):
         return self.nr_caixa
 
 
+import textract
+import csv
+
 class Imprimir(QWidget):
     def __init__(self, n_caixa):
         super(Imprimir, self).__init__()
+        self.black = "#000000"
+        self.yellow = "#cfb119"
+        self.setStyleSheet(f"background-color: {self.black}; color: {self.yellow};")
 
         self.nr_caixa = n_caixa
 
@@ -1592,7 +1599,8 @@ class Imprimir(QWidget):
                         select 
                             p.codigo, 
                             p.descricao,
-                            e.quantidade,    
+                            e.quantidade,
+                            p.preco,    
                             e.valor_total
                         from 
                             produtos p
@@ -1613,44 +1621,35 @@ class Imprimir(QWidget):
         pdf.drawString(310, 750, "PREÇO UN.")
         pdf.drawString(390, 750, "SUB.TOTAL")
         pdf.drawString(470, 750, "TOTAL")
-        pdf.drawString(3, 750, "________________________________________________________________________________________")
+        pdf.drawString(3, 750,
+                       "________________________________________________________________________________________")
 
         total = 0
         subtotal = 0
         for i in range(0, len(dados_lidos)):
             y += 50
-            pdf.drawString(10, 750 - y, str(dados_lidos[i][0]))
-            pdf.drawString(50, 750 - y, str(dados_lidos[i][1]))
-            pdf.drawString(260, 750 - y, str(dados_lidos[i][2]))
-            pdf.drawString(310, 750 - y, str(dados_lidos[i][3]))
-            total += dados_lidos[i][3]
-            subtotal = (dados_lidos[i][3]) * 1
-            pdf.drawString(390, 750 - y, str(subtotal))
-        pdf.drawString(470, 750 - y, str(total))
-
+            pdf.drawString(10, 750 - y, str(dados_lidos[i][0]))  # CODIGO PRODUTO
+            pdf.drawString(50, 750 - y, str(dados_lidos[i][1]))  # DESCRIÇAO PRODUTO
+            pdf.drawString(260, 750 - y, str(dados_lidos[i][2]))  # QUANTIDADE VENDIDA
+            pdf.drawString(310, 750 - y, str(dados_lidos[i][3]))  # PREÇO UNITARIO
+            subtotal = (dados_lidos[i][3]) * dados_lidos[i][2]  # QTD x PREÇO UNITARIO
+            total += subtotal
+            pdf.drawString(390, 750 - y, str(subtotal))  # SUB TOTAL
+        pdf.drawString(470, 750 - y, str(total))  # TOTAL
 
         pdf.save()
 
+        with open('recibo.csv', 'w') as f:
+            csv_writer = csv.writer(f)
+            # csv_writer.writerow([
+            #        "Codigo.", "Descrição", "Quant.", "Preco unit.", "Subtotal"
+            # ])
+            rows = [i for i in dados_lidos]
+            csv_writer.writerows(rows)
 
-        consulta_recibo = []
-        recibo = []
+        self.InitWindow()
 
-        if self.nr_caixa:
-            for i in range(len(dados_lidos)):
-                consulta_recibo.append(dados_lidos[i])
-                # recibo.append(dados_lidos[i][1])
-                # recibo.append(dados_lidos[i][2])
-            for i in consulta_recibo:
-                print("Alista colsulta", consulta_recibo)
-                print("indice i ", i)
-                recibo.append(consulta_recibo)
-
-
-            print("REcibo", recibo)
-
-        self.InitWindow(recibo)
-
-    def InitWindow(self, recibo):
+    def InitWindow(self):
         self.hbox = QHBoxLayout()
 
         self.print_btn = QPushButton("IMPRIMIR", self)
@@ -1659,22 +1658,34 @@ class Imprimir(QWidget):
         self.view_btn = QPushButton("VISUALIZAR", self)
         self.view_btn.clicked.connect(self.view)
 
+        self.rw = PrettyTable()
+        self.rw.field_names = ["Cod.", "Descrição", "Quant.", "Preco unit.", "Subtotal\n"]
+        try:
+            with open("recibo.csv", "r") as msg:
+                self.lin = [x.strip().split(",") for x in msg]
+
+                self.a = [self.lin[x] for x in range(len(self.lin))]
+
+                total = 0
+                for x in self.a:
+                    total += float(x[len(self.a) - 1])
+                    self.rw.set_style(PLAIN_COLUMNS)
+                    self.rw.add_row(x)
+                print(self.rw)
+                msg.close()
+        except Exception as e:
+            self.errors(e)
+
+        empresa = "MINA & MINEKO ART. FEMININS E TABACARIA\n"
+        text = f'\nTOTAL {total:>80} \n{empresa:^90} \nEndereço: \nTelefone: '
+
+        newGroup = QGroupBox("LISTA DE PRODUTOS")
+        newGroup.setStyleSheet(f"background-color: {self.black}; color: {self.yellow}")
+
         self.edt = QTextEdit(self)
-        self.edt.setAcceptRichText(False)
-
-        rec = self.edt.toPlainText()
-        documento = self.edt.document()
-        cursor = QTextCursor(documento)
-        posicao1 = cursor.position()
-        tamanho = len(recibo)
-        print("tamanho", tamanho)
-
-        cod = ''
-        for i in range(len(recibo)):
-            cod = cod + '\n' + str(recibo[0][i])
-
-        cursor.insertText(cod)
-
+        self.edt.setAcceptRichText(True)
+        self.edt.setReadOnly(True)
+        self.edt.setText(f"{self.rw} \n{text}")
         self.vbox.addWidget(self.edt)
 
         self.hbox.addWidget(self.print_btn)
@@ -1684,6 +1695,13 @@ class Imprimir(QWidget):
         self.setWindowTitle(self.title)
         self.setGeometry(self.top, self.left, self.width, self.height)
         self.show()
+
+    def errors(self, e):
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        err = f"{e} \n{exc_type} \n{fname} \n{exc_tb.tb_lineno} \n"
+        print(err)
 
     def print(self):
         prt = QPrinter(QPrinter.HighResolution)
@@ -1701,10 +1719,21 @@ class Imprimir(QWidget):
         prev.paintRequested.connect(self.preview)
         prev.exec_()
 
-
     def preview(self, pt):
         self.edt.print_(pt)
 
+    # testar a criação de um arquivo csv baseado na table
+    def export_to_csv(self, w):
+        try:
+            with open('recibo.csv', 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow((w.table.horizontalHeaderItem(0).text(), w.table.horizontalHeaderItem(1).text()))
+                for rowNumber in range(w.table.rowCount()):
+                    writer.writerow([w.table.item(rowNumber, 0).text(), w.table.item(rowNumber, 1).text()])
+                print('CSV file exported.')
+            file.close()
+        except Exception as e:
+            print(e)
 
 class ListPedidos(QMainWindow):
     def __init__(self):
@@ -1716,11 +1745,9 @@ class ListPedidos(QMainWindow):
         self.setWindowFlag(Qt.WindowMinimizeButtonHint, True)
         self.setWindowFlag(Qt.WindowMaximizeButtonHint, True)
 
-
         ##########################################################################################################
         self.layout = QHBoxLayout()
         self.horizontalGroupBox = QGroupBox("Teste")
-
 
         self.precoinput = QLineEdit()
         self.layout.addWidget(self.precoinput)
@@ -1743,7 +1770,8 @@ class ListPedidos(QMainWindow):
         self.tableWidget.verticalHeader().setVisible(False)
         self.tableWidget.verticalHeader().setCascadingSectionResizes(False)
         self.tableWidget.verticalHeader().setStretchLastSection(False)
-        self.tableWidget.setHorizontalHeaderLabels(("Numero.Pedido", "Cod.Produto", "Descrição","Quantidade", "total", "ultupdate",))
+        self.tableWidget.setHorizontalHeaderLabels(
+            ("Numero.Pedido", "Cod.Produto", "Descrição", "Quantidade", "total", "ultupdate",))
 
         self.cursor = conexao.banco.cursor()
 
@@ -1961,7 +1989,6 @@ class MainWindow(QMainWindow):
         dlg = ListPedidos()
         dlg.exec()
 
-
     def listEstoque(self):
         dlg = ListEstoque()
         dlg.exec()
@@ -2015,13 +2042,6 @@ class MainWindow(QMainWindow):
         pdf.save()
 
         valor = 0
-
-        # def incrementa_valor():
-        #     brprogres = progressBar.setValue()
-        #
-        # # menu.progressBar.setValue(50)
-        # print("pdf foi salvo com sucesso!")
-        print('CUPOM IMPRESSO')
 
     def fechaTela(self, event):
         replay = QMessageBox.question(self, 'Window close', 'Tem certeza de que deseja sair?',
