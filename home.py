@@ -1576,6 +1576,7 @@ class EfetivaPedidoCaixa(QDialog):
 import textract
 import csv
 
+
 class Imprimir(QWidget):
     def __init__(self, n_caixa):
         super(Imprimir, self).__init__()
@@ -1584,6 +1585,7 @@ class Imprimir(QWidget):
         self.setStyleSheet(f"background-color: {self.black}; color: {self.yellow};")
 
         self.nr_caixa = n_caixa
+
 
         self.vbox = QVBoxLayout()
         self.title = "Cadastro"
@@ -1647,6 +1649,8 @@ class Imprimir(QWidget):
             rows = [i for i in dados_lidos]
             csv_writer.writerows(rows)
 
+
+
         self.InitWindow()
 
     def InitWindow(self):
@@ -1668,16 +1672,21 @@ class Imprimir(QWidget):
 
                 total = 0
                 for x in self.a:
-                    total += float(x[len(self.a) - 1])
                     self.rw.set_style(PLAIN_COLUMNS)
                     self.rw.add_row(x)
+
+                for sub in range(len(self.a)):
+                    total += float(self.a[sub][4])
+
                 print(self.rw)
                 msg.close()
         except Exception as e:
             self.errors(e)
 
-        empresa = "MINA & MINEKO ART. FEMININS E TABACARIA\n"
-        text = f'\nTOTAL {total:>80} \n{empresa:^90} \nEndereço: \nTelefone: '
+        empresa = "MINA & MINEKO ART. FEMININS E TABACARIA"
+        endereco = "Rua Enestina Loschi n.76"
+        telefone = "(11) 97151-2237 / (11) 97561-8992)"
+        text = f'\n\nTOTAL: {total:>130} \n\nEmpresa: {empresa:^90} \nEndereço: {endereco:^90} \nTelefones: {telefone:^90}'
 
         newGroup = QGroupBox("LISTA DE PRODUTOS")
         newGroup.setStyleSheet(f"background-color: {self.black}; color: {self.yellow}")
@@ -1689,7 +1698,7 @@ class Imprimir(QWidget):
         self.vbox.addWidget(self.edt)
 
         self.hbox.addWidget(self.print_btn)
-        self.hbox.addWidget(self.view_btn)
+        # self.hbox.addWidget(self.view_btn)
         self.vbox.addLayout(self.hbox)
 
         self.setWindowTitle(self.title)
@@ -1711,7 +1720,7 @@ class Imprimir(QWidget):
             self.edt.print_(prt)
             # self.hide()
             telaprincipal()
-        telaprincipal()
+        # telaprincipal()
 
     def view(self):
         pt = QPrinter(QPrinter.HighResolution)
@@ -1734,6 +1743,7 @@ class Imprimir(QWidget):
             file.close()
         except Exception as e:
             print(e)
+
 
 class ListPedidos(QMainWindow):
     def __init__(self):
