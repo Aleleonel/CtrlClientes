@@ -1643,9 +1643,6 @@ class Imprimir(QWidget):
 
         with open('recibo.csv', 'w') as f:
             csv_writer = csv.writer(f)
-            # csv_writer.writerow([
-            #        "Codigo.", "Descrição", "Quant.", "Preco unit.", "Subtotal"
-            # ])
             rows = [i for i in dados_lidos]
             csv_writer.writerows(rows)
 

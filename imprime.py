@@ -11,7 +11,9 @@ class SendMessage(QWidget):
         super().__init__()
         self.black = "#000000"
         self.yellow = "#cfb119"
-        self.setStyleSheet(f"background-color: {self.black}; color: {self.yellow};")
+        """self.setStyleSheet(
+              f"background-color:{self.black}; color: {self.yellow}"
+              )"""
         self.hbox = QHBoxLayout()
 
         self.rw = PrettyTable()
